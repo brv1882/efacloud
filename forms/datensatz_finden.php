@@ -11,6 +11,7 @@ $user_requested_file = __FILE__;
 include_once "../classes/init.php";
 include_once '../classes/tfyh_form.php';
 include_once '../classes/efa_tables.php';
+$efa_tables = new Efa_tables($toolbox, $socket);
 
 $users_to_show_html = "";
 
@@ -42,8 +43,6 @@ if ($done > 0) {
         // do nothing. This avoids any change, if form errors occured.
     } elseif ($done == 1) {
         $efa2table = $entered_data["Table"];
-        $record = $socket->find_record_matched("Parameter", ["Name" => $efa2table
-        ], true);
         // keep information on selected table in session variable
         $_SESSION["efa2table"] = $efa2table;
         $todo = $done + 1;
@@ -70,7 +69,6 @@ if ($done > 0) {
         $date = new DateTime();
         $nowSeconds = $date->getTimestamp();
         $_SESSION["search_result"] = [];
-        $efa_tables = new Efa_tables($toolbox, $socket);
         $is_versionized = in_array($_SESSION["efa2table"], $efa_tables->is_versionized);
         $short_info_fields = Efa_tables::$short_info_fields[$_SESSION["efa2table"]];
         if (is_array($records))
@@ -83,7 +81,8 @@ if ($done > 0) {
                 if ($invalid)
                     $results_to_show_html .= "<span style='color:#aaa'>";
                 foreach ($record as $key => $value) {
-                    if (in_array($key, $short_info_fields) || (strcasecmp($key, $_SESSION["efa2tablefield"]) == 0)) {
+                    if (in_array($key, $short_info_fields) ||
+                             (strcasecmp($key, $_SESSION["efa2tablefield"]) == 0)) {
                         if (in_array($key, $efa_tables->timestampFields) && (strlen(strval($value)) > 0))
                             $value = $efa_tables->get_readable_date_time($value);
                         if ((strlen(strval($value)) > 0) && (strcasecmp($key, "ecrhis") !== 0)) {
@@ -96,6 +95,8 @@ if ($done > 0) {
                         }
                     }
                 }
+                $results_to_show_html .= $en2de["LastModification"] . ": '" . $record["LastModification"] .
+                         "', ";
                 
                 if ($invalid)
                     $results_to_show_html .= "</span>";
@@ -129,11 +130,13 @@ if (isset($form_filled) && ($todo == $form_filled->get_index())) {
         $total_record_count = 0;
         $total_table_count = 0;
         foreach ($table_names as $tn) {
-            $record_count = $socket->count_records($tn);
-            $total_record_count += $record_count;
-            $total_table_count ++;
-            $select_options_list[] = $tn . "=" . $en2de[$tn] . " [" . $record_count . "]";
-            $table_record_count_list .= $en2de[$tn] . " [" . $record_count . "], ";
+            if ($efa_tables->is_efa_table($tn)) {
+                $record_count = $socket->count_records($tn);
+                $total_record_count += $record_count;
+                $total_table_count ++;
+                $select_options_list[] = $tn . "=" . $en2de[$tn] . " [" . $record_count . "]";
+                $table_record_count_list .= $en2de[$tn] . " [" . $record_count . "], ";
+            }
         }
         $table_record_count_list .= "in Summe [" . $total_record_count . "] Datensätze in " .
                  $total_table_count . " Tabellen.";
@@ -162,8 +165,8 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 <!-- START OF content -->
 <div class="w3-container">
 	<h3>Einen Datensatz finden</h3>
-	<p>Hier kannst Du einen Datensatz unter Angabe der Tabelle und der zu
-		überprüfenden Spalte finden.</p>
+	<p>Hier kannst Du einen efa-Datensatz unter Angabe der efa2-Tabelle und der zu
+		überprüfenden Spalte finden. Für die efaCloud-Tabellen nutze bitte die Verwaltuzngsfunktionen.</p>
 </div>
 
 <div class="w3-container">

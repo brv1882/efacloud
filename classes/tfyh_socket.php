@@ -29,24 +29,9 @@ class Tfyh_socket
     private $mysqli;
 
     /**
-     * data base host. Do not use loclahost, but 127.0.0.1 instead.
-     */
-    private $db_host;
-
-    /**
      * data base name
      */
     private $db_name;
-
-    /**
-     * data base user (account)
-     */
-    private $db_user;
-
-    /**
-     * data base user's password
-     */
-    private $db_pwd;
 
     /**
      * The common toolbox used.
@@ -62,6 +47,11 @@ class Tfyh_socket
      * debug file name for sql-queries
      */
     public $sql_debug_file = "../log/debug_sql.log";
+
+    /**
+     * debug file name for sql-queries
+     */
+    private $sql_error_file = "../log/sys_sql_errors.log";
 
     /**
      * debug file name for sql-queries
@@ -83,39 +73,47 @@ class Tfyh_socket
     function __construct (Tfyh_toolbox $toolbox)
     {
         $cfg = $toolbox->config->get_cfg();
-        $this->db_host = $cfg["db_host"];
         $this->db_name = $cfg["db_name"];
-        $this->db_user = $cfg["db_user"];
-        $this->db_pwd = $cfg["db_up"];
         $this->mysqli = null;
         $this->toolbox = $toolbox;
         $this->debug_on = $toolbox->config->debug_level > 0;
     }
 
     /**
+     * A wrapper to manage exceptions
+     * 
+     * @param String $sql_cmd            
+     */
+    private function mysqli_query (String $sql_cmd, String $caller_text = "tfyh_socket->mysqli_query")
+    {
+        $this->last_sql_executed = $sql_cmd;
+        $log_opener = date("Y-m-d H:i:s") . ": [" . $caller_text . "] " . $sql_cmd . " => ";
+        try {
+            if ($this->debug_on)
+                file_put_contents($this->sql_debug_file, $log_opener, FILE_APPEND);
+            $result = $this->mysqli->query($sql_cmd);
+            if ($result === false) {
+                $log_error = "[FAILED] " . $this->mysqli->error . json_encode($result) . "\n";
+                file_put_contents($this->sql_error_file, $log_opener . $log_error, FILE_APPEND);
+                if ($this->debug_on)
+                    file_put_contents($this->sql_debug_file, $log_error, FILE_APPEND);
+            } elseif ($this->debug_on) {
+                file_put_contents($this->sql_debug_file, "[OK] " . json_encode($result) . "\n", FILE_APPEND);
+            }
+        } catch (Exception $e) {
+            $result = false;
+            $log_error = "[EXCEPTION] " . $this->mysqli->error . "\n";
+            file_put_contents($this->sql_error_file, $log_opener . $log_error, FILE_APPEND);
+            if ($this->debug_on)
+                file_put_contents($this->sql_debug_file, $log_error, FILE_APPEND);
+        }
+        return $result;
+    }
+
+    /**
      * ******************** CONNECTION FUNCTONS AND RAW QUERY *****************************
      */
     
-    /**
-     * Connect to the data base as was configured. $cfg in constructor must contain the appropriate values
-     * for: $cfg["db_host"], $cfg["db_user"], $cfg["db_up"], $cfg["db_name"] to get it going. Returns error
-     * String on failure and true on success.
-     */
-    private function open ()
-    {
-        // do not connect, if connection is open.
-        if (is_null($this->mysqli) || (! $this->mysqli->ping())) {
-            // this will only connect, if $cfg contains the respective settings.
-            $this->mysqli = new mysqli($this->db_host, $this->db_user, $this->db_pwd, $this->db_name);
-        }
-        if ($this->mysqli->connect_error) {
-            return $this->mysqli->connect_error . "<br>db_user: " . $this->db_user . ".";
-        } else {
-            $this->mysqli->query("SET NAMES 'UTF8'");
-            return true;
-        }
-    }
-
     /**
      * Test the connection. Will open the connection, if not yet done and try to query "SELECT 1" to test the
      * data base.
@@ -124,16 +122,22 @@ class Tfyh_socket
      */
     public function open_socket ()
     {
-        // do not connect, if connection is open.
-        if (is_null($this->mysqli) || (! $this->mysqli->ping()))
-            // this will only connect with the correct settings in the settings_db file.
-            $this->mysqli = new mysqli($this->db_host, $this->db_user, $this->db_pwd, $this->db_name);
-        if ($this->mysqli->connect_error)
+        // do nothing, if connection is open.
+        if (! is_null($this->mysqli) && $this->mysqli->ping())
+            return true;
+        $cfg = $this->toolbox->config->get_cfg();
+        // this will only connect with the correct settings in the settings_db file.
+        try {
+            $this->mysqli = new mysqli($cfg["db_host"], $cfg["db_user"], $cfg["db_up"], $this->db_name);
+        } catch (exception $e) {
+            return "Data base connection failed: " . $e->getMessage();
+        }
+            if ($this->mysqli->connect_error)
             return "Data base connection error: " . $this->mysqli->connect_error . ".";
-        $this->mysqli->query("SET NAMES 'UTF8'");
-        $ret = $this->mysqli->query("SELECT 1");
-        // cf.
-        // https://stackoverflow.com/questions/3668506/efficient-sql-test-query-or-validation-query-that-will-work-across-all-or-most
+        $this->mysqli_query("SET NAMES 'UTF8'", "open_socket");
+        $ret = $this->mysqli_query("SELECT 1", "open_socket");
+        // cf. https://stackoverflow.com/questions/3668506/efficient-sql-test-query-or-
+        // validation-query-that-will-work-across-all-or-most
         return ($ret !== false) ? true : "Data base connection successful, but test statement 'SELECT 1' failed.";
     }
 
@@ -177,20 +181,7 @@ class Tfyh_socket
      */
     public function query (String $sql_cmd)
     {
-        if ($this->debug_on) {
-            file_put_contents($this->sql_debug_file, 
-                    date("Y-m-d H:i:s") . ": [tfyh_socket->query] " . $sql_cmd . "\n", FILE_APPEND);
-        }
-        $ret = $this->mysqli->query($sql_cmd);
-        if ($this->debug_on && ($ret === false))
-            file_put_contents($this->sql_debug_file, 
-                    date("Y-m-d H:i:s") . ": [tfyh_socket->query error] " . $this->mysqli->error . "\n", 
-                    FILE_APPEND);
-        elseif ($this->debug_on)
-            file_put_contents($this->sql_debug_file, 
-                    date("Y-m-d H:i:s") . ": [tfyh_socket->query result] " . json_encode($ret) . "\n", 
-                    FILE_APPEND);
-        return $ret;
+        return $this->mysqli_query($sql_cmd, "custom query");
     }
 
     /**
@@ -225,15 +216,15 @@ class Tfyh_socket
         $eldest_change = date("Y-m-d H:i:s", $now);
         $sql_cmd = "DELETE FROM `" . $this->toolbox->config->changelog_name . "` WHERE `Time`<'" .
                  $eldest_change . "'";
-        $this->mysqli->query($sql_cmd);
+        $this->mysqli_query($sql_cmd, "cleanse_change_log");
         // now delete those which are just an overflow, e. g. by data base loading
         $sql_cmd = "SELECT `Time` FROM `" . $this->toolbox->config->changelog_name .
                  "` WHERE 1 ORDER BY `Time` DESC LIMIT " . ($records_to_keep + 2);
-        $res = $this->mysqli->query($sql_cmd);
-        if (intval($res->num_rows) > 0) {
+        $res = $this->mysqli_query($sql_cmd);
+        $rows = 0;
+        if (($res !== false) && intval($res->num_rows) > 0) {
             $row = $res->fetch_row();
             $max_change = $eldest_change;
-            $rows = 0;
             while ($row) {
                 $max_change = $row[0];
                 $rows ++;
@@ -243,7 +234,7 @@ class Tfyh_socket
         if ($rows > $records_to_keep) {
             $sql_cmd = "DELETE FROM `" . $this->toolbox->config->changelog_name . "` WHERE `Time`<'" .
                      $max_change . "'";
-            $this->mysqli->query($sql_cmd);
+            $this->mysqli_query($sql_cmd);
         }
     }
 
@@ -254,8 +245,10 @@ class Tfyh_socket
     {
         $sql_cmd = "SELECT `Author`, `Time`, `ChangedTable`, `ChangedID`, `Modification` FROM `" .
                  $this->toolbox->config->changelog_name . "` WHERE 1 ORDER BY `ID` DESC LIMIT 200";
-        $res = $this->mysqli->query($sql_cmd);
-        if (intval($res->num_rows) > 0)
+        $res = $this->mysqli_query($sql_cmd, "get_change_log");
+        if ($res === false)
+            return "<h3>Changes</h3><br>Error executing database SELECT statement.";
+        elseif (intval($res->num_rows) > 0)
             $row = $res->fetch_row();
         else
             return "No changes logged.";
@@ -282,18 +275,20 @@ class Tfyh_socket
      *            ID of changed entry. In case of inert statement, set to "" to use autoincremented id of
      *            inserted
      * @param String $change_entry
-     *            Change text to be logged. Values within change text must be UTF-8 encoded.
+     *            Change text to be logged. Values within change text must be UTF-8 encoded, single quotes
+     *            must be escaped.
      * @param bool $return_insert_id
      *            set true to try to return the insert id upon success. Use only when called with INSERT INTO
      *            statement.
+     * @param bool $caller_text
+     *            indicate the calling function as String.
      * @return mixed an error statement in case of failure, the numeric ID of the inserted record in case of
      *         insert-to success, else "".
      */
     private function execute_and_log (String $appUserID, String $table_name, String $sql_cmd, 
-            String $changed_id, String $change_entry, bool $return_insert_id)
+            String $changed_id, String $change_entry, bool $return_insert_id, String $caller_text)
     {
         // debug helper
-        $this->last_sql_executed = $sql_cmd;
         if ($this->debug_on) {
             file_put_contents($this->sql_debug_file, 
                     date("Y-m-d H:i:s") . ":  [tfyh_socket->execute_and_log] " . $sql_cmd . " => ", 
@@ -301,7 +296,7 @@ class Tfyh_socket
         }
         // execute sql command. Connection must have been opened before.
         $ret = "";
-        $res = $this->mysqli->query($sql_cmd);
+        $res = $this->mysqli_query($sql_cmd, $caller_text);
         if ($res === false) {
             if ($this->debug_on)
                 file_put_contents($this->sql_debug_file, "failed: " . $this->mysqli->error . "\n", 
@@ -322,7 +317,7 @@ class Tfyh_socket
                      "` (`Author`, `Time`, `ChangedTable`, `ChangedID`, `Modification`) VALUES ('" . $appUserID .
                      "', CURRENT_TIMESTAMP, '" . $table_name . "', '" . $changed_id . "', '" .
                      str_replace("'", "\'", $change_entry) . "');";
-            $tmpr = $this->mysqli->query($sql_cmd);
+            $tmpr = $this->mysqli_query($sql_cmd, "[change-log entry]");
         }
         return $ret;
     }
@@ -433,7 +428,8 @@ class Tfyh_socket
             // information
             if (! isset($this->toolbox->config->settings_tfyh["history"][$table_name]) || (strcasecmp($key, 
                     $this->toolbox->config->settings_tfyh["history"][$table_name]) != 0))
-                $change_entry .= $key . '="' . str_replace("'", "\'", $value) . '", ';
+                // No quote escaping in the change log entry. This will be handled in execute_and_log().
+                $change_entry .= $key . '="' . $value . '", ';
         }
         // cut off last ", `";
         $sql_cmd = substr($sql_cmd, 0, strlen($sql_cmd) - 3);
@@ -451,7 +447,8 @@ class Tfyh_socket
             file_put_contents("../log/lwa/" . $appUserID, strval(time()));
         
         // execute sql command and log execution.
-        $res = $this->execute_and_log($appUserID, $table_name, $sql_cmd, "", $change_entry, true);
+        $res = $this->execute_and_log($appUserID, $table_name, $sql_cmd, "", $change_entry, true, 
+                "insert_into");
         // trigger listeners
         if (count($this->listeners) > 0) {
             foreach ($this->listeners as $listener)
@@ -716,8 +713,8 @@ class Tfyh_socket
             if (! $skip_update && (strcmp($value, $prev_rec[$key]) !== 0) && (! isset(
                     $this->toolbox->config->settings_tfyh["history"][$table_name]) || (strcasecmp($key, 
                     $this->toolbox->config->settings_tfyh["history"][$table_name]) != 0)))
-                $change_entry .= $key . ': "' . str_replace("'", "\'", 
-                        $prev_rec[$key] . '"=>"' . str_replace("'", "\'", $value)) . '", ';
+                // No quote escaping in the change log entry. This will be handled in execute_and_log().
+                $change_entry .= $key . ': "' . $prev_rec[$key] . '"=>"' . $value . '", ';
         }
         $sql_cmd = substr($sql_cmd, 0, strlen($sql_cmd) - 1);
         $change_entry = substr($change_entry, 0, strlen($change_entry) - 2);
@@ -729,7 +726,7 @@ class Tfyh_socket
         
         // execute sql command and log execution.
         $result = $this->execute_and_log($appUserID, $table_name, $sql_cmd, 
-                $this->matched_record($matching_keys), $change_entry, false);
+                $this->matched_record($matching_keys), $change_entry, false, "update_record");
         // trigger listeners
         if (count($this->listeners) > 0) {
             foreach ($this->listeners as $listener)
@@ -767,15 +764,16 @@ class Tfyh_socket
         $prev_rec = $this->find_record_matched($table_name, $matching);
         if ($prev_rec === false)
             return "Record to delete was not found.";
-        $delete_entry = "deleted: ";
+        $change_entry = "deleted: ";
         
         // create SQL command and change log entry.
+        // No quote escaping in the change log entry. This will be handled in execute_and_log().
         foreach ($prev_rec as $key => $value) {
-            $delete_entry .= $key . "='" . str_replace('"', '\"', $prev_rec[$key]) . "', ";
+            $change_entry .= $key . "='" . $prev_rec[$key] . "', ";
         }
         // deletions will not change the last modified time stamp, because they
         // delete the data anyway.
-        $delete_entry = substr($delete_entry, 0, strlen($delete_entry) - 2);
+        $change_entry = substr($change_entry, 0, strlen($change_entry) - 2);
         // ID used is **ID**
         $sql_cmd .= "DELETE FROM `" . $table_name . "` " .
                  $this->clause_for_wherekeyis($table_name, $matching, "=");
@@ -786,7 +784,7 @@ class Tfyh_socket
         
         // execute sql command and log execution.
         $result = $this->execute_and_log($appUserID, $table_name, $sql_cmd, $this->matched_record($matching), 
-                $delete_entry, false);
+                $change_entry, false, "delete_record");
         // trigger listeners
         if (count($this->listeners) > 0) {
             foreach ($this->listeners as $listener)
@@ -948,25 +946,7 @@ class Tfyh_socket
         // compile command and execute
         $sql_cmd = "SELECT " . $col_indicators . " FROM `" . $table_name . "` " . $where_string . $sort_str .
                  $limit_string;
-        if ($this->debug_on)
-            file_put_contents($this->sql_debug_file, 
-                    date("Y-m-d H:i:s") . ": [tfyh_socket->find_records_sorted_matched] " . $sql_cmd . "\n", 
-                    FILE_APPEND);
-        
-        $this->last_sql_executed = $sql_cmd;
-        if ($this->debug_on) {
-            file_put_contents($this->sql_debug_file, date("Y-m-d H:i:s") . ": " . $sql_cmd . " => ", 
-                    FILE_APPEND);
-        }
-        // retrieve data from data base
-        $res = $this->mysqli->query($sql_cmd);
-        if ($this->debug_on) {
-            if ($res === false)
-                file_put_contents($this->sql_debug_file, "failed: " . $this->mysqli->error . "\n", 
-                        FILE_APPEND);
-            else
-                file_put_contents($this->sql_debug_file, "successful.\n", FILE_APPEND);
-        }
+        $res = $this->mysqli_query($sql_cmd, "find_records_sorted_matched");
         $rows = [];
         $n_rows = 0;
         if (isset($res) && ($res !== false) && (intval($res->num_rows) > 0)) {
@@ -1012,7 +992,7 @@ class Tfyh_socket
         $sql_cmd = ($matching == null) ? "SELECT COUNT(*) FROM `" . $tablename . "`;" : "SELECT COUNT(*) FROM `" .
                  $tablename . "` " . $this->clause_for_wherekeyis($tablename, $matching, $condition);
         $this->last_sql_executed = $sql_cmd;
-        $res = $this->mysqli->query($sql_cmd);
+        $res = $this->mysqli_query($sql_cmd, "count_records");
         $count = 0;
         if (is_object($res) && intval($res->num_rows) > 0) {
             $row = $res->fetch_row();
@@ -1035,7 +1015,7 @@ class Tfyh_socket
         // now retrieve all column names
         $sql_cmd = "SELECT `" . $columnname . "`, COUNT(`" . $columnname . "`) FROM `" . $tablename .
                  "` GROUP BY `" . $columnname . "`;";
-        $res = $this->mysqli->query($sql_cmd);
+        $res = $this->mysqli_query($sql_cmd, "count_values");
         $ret = [];
         if (is_object($res) && intval($res->num_rows) > 0) {
             $row = $res->fetch_row();
@@ -1076,24 +1056,26 @@ class Tfyh_socket
             $col_indicators .= "`" . $col_name . "`, ";
         $col_indicators = substr($col_indicators, 0, strlen($col_indicators) - 2);
         $sql_cmd = "SELECT " . $col_indicators . " FROM `" . $table_name . "` WHERE 1";
-        $res = $this->mysqli->query($sql_cmd);
-        $row = $res->fetch_row();
-        while ($row) {
-            // the fetch_row function is an iterator, returning an array with
-            // the table name always being at pos 0
-            $entries = 0;
-            foreach ($row as $entry) {
-                if ((strpos($entry, ";") !== false) || (strpos($entry, '"') !== false))
-                    $entry = '"' . str_replace('"', '""', $entry) . '"';
-                $csv .= $entry . ";";
-                $entries ++;
-            }
-            if ($entries > 0)
-                $csv = substr($csv, 0, strlen($csv) - 1);
-            $csv .= "\n";
+        $res = $this->mysqli_query($sql_cmd, "get_table_as_csv");
+        if ($res !== false) {
             $row = $res->fetch_row();
+            while ($row) {
+                // the fetch_row function is an iterator, returning an array with
+                // the table name always being at pos 0
+                $entries = 0;
+                foreach ($row as $entry) {
+                    if ((strpos($entry, ";") !== false) || (strpos($entry, '"') !== false))
+                        $entry = '"' . str_replace('"', '""', $entry) . '"';
+                    $csv .= $entry . ";";
+                    $entries ++;
+                }
+                if ($entries > 0)
+                    $csv = substr($csv, 0, strlen($csv) - 1);
+                $csv .= "\n";
+                $row = $res->fetch_row();
+            }
+            $res->free();
         }
-        $res->free();
         return $csv;
     }
 
@@ -1123,22 +1105,24 @@ class Tfyh_socket
             $col_indicators .= "`" . $col_name . "`, ";
         $col_indicators = substr($col_indicators, 0, strlen($col_indicators) - 2);
         $sql_cmd = "SELECT " . $col_indicators . " FROM " . $table_name . " " . $filter_and_order;
-        $res = $this->mysqli->query($sql_cmd);
-        $row = $res->fetch_row();
+        $res = $this->mysqli_query($sql_cmd, "get_table_as_array");
         $rows = [];
-        while ($row) {
-            // the fetch_row function is an iterator, returning an array with
-            // the table name always being at pos 0
-            $entries = [];
-            $c = 0;
-            foreach ($row as $entry) {
-                $entries[$header[$c]] = $entry;
-                $c ++;
-            }
-            $rows[] = $entries;
+        if ($res !== false) {
             $row = $res->fetch_row();
+            while ($row) {
+                // the fetch_row function is an iterator, returning an array with
+                // the table name always being at pos 0
+                $entries = [];
+                $c = 0;
+                foreach ($row as $entry) {
+                    $entries[$header[$c]] = $entry;
+                    $c ++;
+                }
+                $rows[] = $entries;
+                $row = $res->fetch_row();
+            }
+            $res->free();
         }
-        $res->free();
         return $rows;
     }
 
@@ -1207,8 +1191,8 @@ class Tfyh_socket
             if ($update_record && ! $delete_entries) {
                 // check whether ID exists
                 $sql_cmd = "SELECT * FROM `" . $table_name . "` WHERE `" . $idname . "` = '" . $id . "'";
-                $res = $this->mysqli->query($sql_cmd);
-                $update_record = intval($res->num_rows) > 0;
+                $res = $this->mysqli_query($sql_cmd, "import_table_from_csv");
+                $update_record = ($res !== false) && (intval($res->num_rows) > 0);
                 if ($update_record) {
                     // update record now
                     $result .= "Update " . $idname . " " . $id . " mit: ";
@@ -1308,11 +1292,11 @@ class Tfyh_socket
         $sql_cmd = "SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA`='" .
                  $this->db_name . "' AND `TABLE_NAME`='" . $table_name . "' ORDER BY ORDINAL_POSITION";
         
-        $result = $this->mysqli->query($sql_cmd);
-        // put all values to the array, with numeric autoincrementing key.
+        $result = $this->mysqli_query($sql_cmd, "get_column_names");
         $ret = [];
         if (! is_array($result) && ! is_object($result))
             return $ret;
+        // put all values to the array, with numeric autoincrementing key.
         $column_names = $result->fetch_array();
         while ($column_names) {
             // the fetch_array function is an iterator, returning an array with
@@ -1337,9 +1321,11 @@ class Tfyh_socket
         // now retrieve all column names
         $sql_cmd = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA`='" .
                  $this->db_name . "' AND `TABLE_NAME`='" . $table_name . "' ORDER BY ORDINAL_POSITION";
-        $res = $this->mysqli->query($sql_cmd);
-        // put all values to the array, with numeric autoincrementing key.
+        $res = $this->mysqli_query($sql_cmd, "get_column_types");
         $ret = [];
+        if (! is_array($res) && ! is_object($res))
+            return $ret;
+        // put all values to the array, with numeric autoincrementing key.
         $column_types = $res->fetch_array();
         while ($column_types) {
             // the fetch_array function is an iterator
@@ -1366,8 +1352,10 @@ class Tfyh_socket
                          "Sub_part,Packed,Null,Index_type,Comment,Index_comment,Visible,Expression");
         $sql_cmd = "SHOW KEYS FROM " . $table_name;
         $indexes = [];
-        $res = $this->query($sql_cmd);
-        if (($res != false) && ($res->num_rows > 0)) {
+        $res = $this->mysqli_query($sql_cmd, "get_indexes");
+        if (! is_array($res) && ! is_object($res))
+            return $indexes;
+        if ($res->num_rows > 0) {
             $row = $res->fetch_row();
             while ($row) {
                 $c = 0;
@@ -1401,13 +1389,14 @@ class Tfyh_socket
     public function get_autoincrements (String $table_name)
     {
         // SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'efaCloudUsers' AND EXTRA
-        // like
-        // '%auto_increment%'
+        // LIKE '%auto_increment%'
         $sql_cmd = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" . $table_name .
-                 "' AND EXTRA like '%auto_increment%'";
+                 "' AND EXTRA LIKE '%auto_increment%'";
         $autoincrements = [];
-        $res = $this->query($sql_cmd);
-        if (($res != false) && ($res->num_rows > 0)) {
+        $res = $this->mysqli_query($sql_cmd, "get_autoincrements");
+        if (! is_array($res) && ! is_object($res))
+            return $autoincrements;
+        if ($res->num_rows > 0) {
             $row = $res->fetch_row();
             while ($row) {
                 $autoincrements[$row[3]] = $row[15] . ", " . $row[16] . ", " . $row[18];
@@ -1426,7 +1415,7 @@ class Tfyh_socket
     {
         $sql_cmd = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' " .
                  "AND TABLE_SCHEMA='" . $this->db_name . "' ";
-        $res = $this->mysqli->query($sql_cmd);
+        $res = $this->mysqli_query($sql_cmd, "get_table_names");
         // put all values to the array, the column name being the key.
         $ret = [];
         $row = $res->fetch_row();

@@ -1,0 +1,17 @@
+id;permission;name;select;from;where;options
+1;bths;efa2boatdamages;BoatId,Damage,Description,Severity,ecrid,LastModification,LastModified;efa2boatdamages;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+2;bths;efa2boatreservations;VirtualBoat,BoatId,Reservation,Type,ecrid,LastModification,LastModified;efa2boatreservations;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+3;bths;efa2boats;Id,Name,ecrid,LastModification,LastModified;efa2boats;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+4;bths;efa2boatstatus;BoatId,BoatText,ecrid,LastModification,LastModified;efa2boatstatus;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+5;bths;efa2clubwork;Id,FirstLastName,ecrid,LastModification,LastModified;efa2clubwork;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+6;bths;efa2crews;Id,Name,ecrid,LastModification,LastModified;efa2crews;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+7;bths;efa2destinations;Id,Name,ecrid,LastModification,LastModified;efa2destinations;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+8;bths;efa2fahrtenabzeichen;PersonId,Abzeichen,ecrid,LastModification,LastModified;efa2fahrtenabzeichen;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+9;bths;efa2groups;Id,Name,ecrid,LastModification,LastModified;efa2groups;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+10;bths;efa2logbook;EntryId,Date,ecrid,LastModification,LastModified;efa2logbook;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+11;bths;efa2messages;MessageId,Date,Time,To,ecrid,LastModification,LastModified;efa2messages;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+12;bths;efa2persons;Id,FirstName,LastName,FirstLastName,ecrid,LastModification,LastModified;efa2persons;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+13;bths;efa2sessiongroups;Id,Logbook,Name,ecrid,LastModification,LastModified;efa2sessiongroups;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+14;bths;efa2statistics;Id,Name,ecrid,LastModification,LastModified;efa2statistics;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+15;bths;efa2status;Id,Name,ecrid,LastModification,LastModified;efa2status;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);
+16;bths;efa2waters;Id,Name,ecrid,LastModification,LastModified;efa2waters;(`ecrid` = '') OR (ISNULL(`ecrid`)) OR (`LastModification` = '') OR (ISNULL(`LastModification`)) OR (`LastModified` = 0);

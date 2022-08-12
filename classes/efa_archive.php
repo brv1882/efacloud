@@ -52,7 +52,6 @@ class Efa_archive
      */
     private $age_parameters = ["DamageAgeDays","ReservationAgeDays","ClubworkAgeDays","TripAgeDays",
             "MessageAgeDays","PersonsAgeDays"
-    
     ];
 
     /**
@@ -241,6 +240,7 @@ class Efa_archive
         $versionized_rows = $versionized_list->get_rows();
         $count_archived = 0;
         $count_failed = 0;
+        
         foreach ($versionized_rows as $versionized_row) {
             // the first record of an object is kept, thus needs special treatment.
             $first_record_of_id = strcmp($versionized_row[$pos_field_for_uuid], $last_uuid) != 0;
@@ -249,6 +249,31 @@ class Efa_archive
             // check whether this object was already archived.
             $is_archived = $first_record_of_id && ($pos_field_for_archive_id !== false) && (strpos(
                     $versionized_row[$pos_field_for_archive_id], Efa_archive::$archive_id_prefix) !== false);
+            
+            // TODO remove this check after the archiving is stable. Introduced: 26.04.2022
+            $pos_last_modified = $versionized_list->get_field_index("LastModified");
+            $pos_ecrid = $versionized_list->get_field_index("ecrid");
+            $last_modified = intval(
+                    substr($versionized_row[$pos_last_modified], 0, 
+                            strlen($versionized_row[$pos_last_modified]) - 3));
+            if ($is_archived && ($last_modified < 1650600000)) {
+                // i.e. LastModified is earlier than 22.4.2022 04:00
+                $ecrid = $versionized_row[$pos_ecrid];
+                // retrieve the full record
+                $full_record = $this->socket->find_record($table_name, "ecrid", $ecrid);
+                $archive_id = $versionized_row[$pos_field_for_archive_id];
+                    if ($full_record !== false) {
+                    $emptied_record = $this->efa_tables->clear_record_for_delete($table_name, $full_record);
+                    $emptied_record[$this->field_for_archive_id[$table_name]] = $archive_id;
+                    if ($keep_min_for_reference)
+                        $emptied_record["LastModification"] = "update";
+                    $this->socket->update_record_matched($this->app_user_id, $table_name, 
+                            ["ecrid" => $ecrid
+                            ], $emptied_record);
+                }
+            }
+            // TODO remove this check after the archiving is stable. Introduced: 26.04.2022
+            
             // check whether this object shall be archived.
             $this_id_to_archive = ($first_record_of_id && ! $is_archived) ? (time() - $valid32) > $max_age : $this_id_to_archive;
             if ($this_id_to_archive) {
@@ -312,9 +337,10 @@ class Efa_archive
         // define the list to use
         include_once '../classes/tfyh_list.php';
         foreach ($this->age_parameters as $age_parameter) {
-            // Default is 100 years, i.e. never archive.
+            // Set the age parameter value. The default should be set in the tfyh_settings file.
             $age_parameter_value = (isset($this->cfg[$age_parameter]) &&
-                     (strlen($this->cfg[$age_parameter]) > 0)) ? intval($this->cfg[$age_parameter]) : 36500;
+                     (intval($this->cfg[$age_parameter]) > 180)) ? intval($this->cfg[$age_parameter]) : 180;
+            // The archiving trigger can never be less than 180 days.
             $list_args = ["{" . $age_parameter . "}" => $age_parameter_value
             ]; // These arguments are not needed for the versionized list, but do no harm.
             $archive_target_list = new Tfyh_list("../config/lists/efaArchive", $id, "", $this->socket, 

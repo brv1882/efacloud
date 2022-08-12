@@ -106,8 +106,8 @@ var bFormHandler = {
 		tx = bTxQueue.addNewTxToPending("insert", "efa2logbook", pairs, 0,
 				bPanel.update());
 
-		// now adapt boatstatus, if the boat was resolved
-		bBoat.updateBoatStatus(record);
+		// now adapt boatstatus
+		bBoat.updateBoatStatusOnTrip(record);
 	},
 
 	/**
@@ -185,8 +185,8 @@ var bFormHandler = {
 		tx = bTxQueue
 				.addNewTxToPending("update", "efa2logbook", pairs, 0, null);
 
-		// now adapt boatstatus, if the boat was resolved
-		bBoat.updateBoatStatus(record);
+		// now adapt boatstatus
+		bBoat.updateBoatStatusOnTrip(record);
 	},
 
 	/**
@@ -238,6 +238,9 @@ var bFormHandler = {
 		var recordCsv = bTxHandler.recordToCsv(record);
 		var tx = bTxQueue.addNewTxToPending("insert", "efa2boatdamages",
 				recordCsv, 0, null);
+
+		// now adapt boatstatus
+		bBoat.updateBoatStatusOnDamage(record);
 	},
 
 	/**

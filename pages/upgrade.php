@@ -12,7 +12,7 @@ include_once "../classes/init.php";
 // Source Code path.
 // ====== Depends on the ../config/settings_tfyh file.
 $app_src_path = $toolbox->config->settings_tfyh["upgrade"]["src_path"];
-if (is_null($$app_src_path))
+if (is_null($app_src_path))
     $app_src_path = $app_root . "/_src/server.zip";
 $app_version_path = $toolbox->config->settings_tfyh["upgrade"]["version_path"];
 if (is_null($app_version_path))
@@ -39,7 +39,8 @@ if (! isset($_GET["upgrade"])) {
 	Code-Dateien. Alle Bestandsdaten, wie zum Beispiel logs, uploads,
 	backups usw. bleiben erhalten. Die Datenbank wird nicht modifiziert.</p>
 <?php
-    echo "<p>Aktuell ist installiert: <b>" . $current_version . "</b><br>Installationszeitpunkt war: <b>" .
+    echo "<p>Aktuell ist installiert: <b>" . $current_version .
+             "</b><br>Installationszeitpunkt war: <b>" .
              date("d.m.Y H:i:s", $current_version_installed) . "</b></p>";
     ?>
 <p>Ein Upgrade kann nicht rückgängig gemacht werden. Es empfiehlt sich
@@ -57,10 +58,10 @@ if (! isset($_GET["upgrade"])) {
     // ==============================================================================================
     // check loaded modules
     // ==============================================================================================
-    $ref_config = ["bz2","calendar","Core","ctype","curl","date","dom","exif","fileinfo","filter","ftp",
-            "gd","gettext","hash","iconv","json","libxml","mbstring","mysqli","openssl","pcre","pdo_mysql",
-            "PDO","Phar","posix","Reflection","session","SimpleXML","sockets","SPL","standard","tokenizer",
-            "xml","xmlreader","xmlwriter","xsl","zip","zlib"
+    $ref_config = ["bz2","calendar","Core","ctype","curl","date","dom","exif","fileinfo",
+            "filter","ftp","gd","gettext","hash","iconv","json","libxml","mbstring","mysqli",
+            "openssl","pcre","pdo_mysql","PDO","Phar","posix","Reflection","session","SimpleXML",
+            "sockets","SPL","standard","tokenizer","xml","xmlreader","xmlwriter","xsl","zip","zlib"
     ];
     $this_config = get_loaded_extensions();
     $missing = [];
@@ -135,22 +136,22 @@ if (! isset($_GET["upgrade"])) {
     // Set directories' access rights.
     // ==============================================================================================
     echo "Setze die Zugriffsberechtigung der angelegten Dateistruktur ...<br>";
-    $restricted = ["all_mails_localhost","attachments","classes","config","install","log","pdfs","tcpdf",
-            "templates","uploads"
+    $restricted = ["all_mails_localhost","attachments","classes","config","install","log",
+            "pdfs","tcpdf","templates","uploads"
     ];
     $open = ["api","forms","js","labels","pages","public","resources"
     ];
     foreach ($restricted as $dirname) {
         // some directories may not exist, because they do not contain source code.
-        if (! file_exists($dirname))
-            mkdir($dirname);
-        chmod($dirname, 0700);
+        if (! file_exists("../" . $dirname))
+            mkdir("../" . $dirname);
+        chmod("../" . $dirname, 0700);
     }
     foreach ($open as $dirname) {
         // some directories may not exist, because they do not contain source code.
-        if (! file_exists($dirname))
-            mkdir($dirname);
-        chmod($dirname, 0755);
+        if (! file_exists("../" . $dirname))
+            mkdir("../" . $dirname);
+        chmod("../" . $dirname, 0755);
     }
     echo ' ... Durchführung fertig.<br></p>';
     

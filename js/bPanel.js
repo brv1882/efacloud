@@ -209,7 +209,7 @@ var bPanel = {
 			if (isAllowedAction("showList_logbook_50")) doAction("showList_logbook_50");
 			bindMenuEvents();
 		} catch (e) {
-			showException(e);
+			bModal.showException(e);
 		}
 	}
 

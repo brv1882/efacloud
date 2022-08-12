@@ -3,11 +3,12 @@ id;permission;name;select;from;where;options
   LastModified;efaCloudUsers;NOT (Rolle='anonymous') AND NOT (Rolle='guest');sort=efaCloudUserID&link=ID:../forms/nutzer_aendern.php?id=
 2;admin;Administratoren;ID,efaCloudUserID,EMail,Vorname,Nachname,Rolle,Passwort_Hash, \
   LastModified;efaCloudUsers;Rolle='admin';sort=efaCloudUserID
-3;admin;Privilegierte Nutzer;ID,EMail,efaCloudUserID,Vorname,Nachname, \
+3;admin;Privilegierte Nutzer (auch für Security-Concept);ID,EMail,efaCloudUserID,Vorname,Nachname, \
   Rolle,Passwort_Hash,LastModified,ecrhis,efaAdminName,Workflows,Concessions;efaCloudUsers; \
   (`Rolle` = 'admin') OR (`Rolle` = 'board') OR (`Rolle` = 'bths');sort=Rolle.Nachname
-4;admin;Nutzer mit efa-Admin Rechten;ID,EMail,efaCloudUserID,Vorname,Nachname, \
+4;admin;Nutzer mit efa-Admin Rechten (auch für Security-Concept);ID,EMail,efaCloudUserID,Vorname,Nachname, \
   Rolle,Passwort_Hash,LastModified,ecrhis,efaAdminName,Workflows,Concessions;efaCloudUsers; \
   (`Workflows`> 0) OR (`Concessions`> 0);sort=ID
-5;admin;Gesäuberte Datensätze;ID,Author,Time,Reason,ChangedTable,ChangedRecord;efaCloudCleansed;1;sort=ID
-6;admin;Changelog;ID,Author,Time,ChangedTable,ChangedID,Modification,LastModified;efaCloudLog;1;sort=ID
+5;admin;Changelog (auch für Security-Concept);ID,Author,Time,ChangedTable,ChangedID,Modification,LastModified;efaCloudLog;1;sort=ID
+6;admin;Gesäuberte Datensätze;ID,Author,Time,Reason,ChangedTable,ChangedRecord;efaCloudCleansed;1;sort=ID
+7;admin;Archivierte Datensätze;ID,Time,Table,Record;efaCloudArchived;1;sort=ID&link=ID:../pages/view_archive_record.php?id=

@@ -1,5 +1,5 @@
 id;permission;name;select;from;where;options
-2;member;efaWeb_boatdamages;Damage,BoatId,Severity,Description,Fixed,ChangeCount,ecrid;efa2boatdamages;(`LastModified` > {LastModified});
+2;member;efaWeb_boatdamages;Damage,BoatId,Severity,Description,Fixed,ChangeCount,ecrid;efa2boatdamages;(ISNULL(Fixed) AND NOT (`efa2boatdamages`.`LastModification` = 'delete'));
 3;member;efaWeb_boatreservations;Reservation,BoatId,DateFrom,DateTo,TimeFrom,TimeTo,Type,Reason,ChangeCount,ecrid;efa2boatreservations;(`LastModified` > {LastModified});
 4;member;efaWeb_boats;Id,InvalidFrom,Name,TypeCoxing,TypeSeats,ecrid;efa2boats;(`LastModified` > {LastModified}) AND (InvalidFrom > 9999999999000);
 5;member;efaWeb_boatstatus;BoatId,Comment,BaseStatus,CurrentStatus,ShowInList,ChangeCount,ecrid;efa2boatstatus;1;
@@ -16,7 +16,7 @@ id;permission;name;select;from;where;options
   NOT ISNULL(`BoatId`) And NOT (`BoatId` = '') AND (`Open` = 'true');
 12;member;efaWeb_messages;MessageId,Date,From,Subject,Time,To,ChangeCount,ecrid;efa2messages;(`LastModified` > {LastModified});
 13;member;efaWeb_persons;Id,InvalidFrom,FirstName,LastName,StatusId,ecrid;efa2persons; \
-  (`LastModified` > {LastModified});sort=Id.-InvalidFrom&firstofblock=Id
+  NOT (`LastName` LIKE 'archiveID:%') AND (`LastModified` > {LastModified});sort=Id.-InvalidFrom&firstofblock=Id
 14;member;efaWeb_sessiongroups;Id,Logbook,Name,ChangeCount,ecrid;efa2sessiongroups;(`LastModified` > {LastModified});
 15;member;efaWeb_status;Id,Membership,Name,Type,ecrid;efa2status;(`LastModified` > {LastModified});
 16;member;efaWeb_waters;Id,Name,ecrid;efa2waters;(`LastModified` > {LastModified});

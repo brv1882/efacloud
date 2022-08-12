@@ -35,6 +35,8 @@ if ($done > 0) {
         $byte_cnt = file_put_contents($settings_path . "_app", $cfgStrBase64);
         $info .= $byte_cnt . " Bytes.</p>";
         $todo = $done + 1;
+        // refresh settings immediately
+        $toolbox->config->load_app_configuration();
     }
 }
 
@@ -45,7 +47,7 @@ if (isset($form_filled) && ($todo == $form_filled->get_index())) {
 } else {
     // if it is the start or all is fine, use a form for the coming step.
     $form_to_fill = new Tfyh_form($form_layout, $socket, $toolbox, $todo, $fs_id);
-    $form_to_fill->preset_values($toolbox->config->get_cfg(), true);
+    $form_to_fill->preset_values($toolbox->config->get_cfg());
 }
 
 // === PAGE OUTPUT ===================================================================
@@ -60,8 +62,12 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 <!-- START OF content -->
 <div class="w3-container">
 	<h3>Konfigurationsparameter ändern</h3>
-	<p>Hier können die Konfigurationsparameter mit Ausnahme der
-		Datenbankzugangsdaten geändert werden.</p>
+	<p>
+		Hier kann die Konfiguration angepasst werden. Die Anpassung von Farben
+		und Schrifttyp ist <b><i><a href='../forms/farben_aendern.php'>hier</a></i></b>
+		möglich. Die Datenbankzugangsdaten können nur bei der Installation
+		geüändert werden.
+	</p>
 <?php
 
 echo $toolbox->form_errors_to_html($form_errors);

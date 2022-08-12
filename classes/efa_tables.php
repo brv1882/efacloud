@@ -76,7 +76,7 @@ class Efa_tables
      * has a different version, The data base layout shall be adjusted during the upgrade procedure. Integer
      * value.
      */
-    public $db_layout_version_target = 5;
+    public $db_layout_version_target = 6;
 
     /**
      * Column names of those columns that represent the data key of the specific efa2 table. These key fields
@@ -710,6 +710,8 @@ class Efa_tables
         }
         if (strlen($allCrewIds) > 0)
             $allCrewIds = substr($allCrewIds, 0, strlen($allCrewIds) - 1);
+        if (strlen($allCrewIds) == 0)
+            $allCrewIds = "-"; // if the field is left empty it will always be regenerated
         return $allCrewIds;
     }
 
@@ -849,7 +851,9 @@ class Efa_tables
                 $maxNumericID = $this->socket->find_records_sorted_matched($tablename, [], 1, "", "Damage", 
                         false);
                 $setautoincrement = intval($maxNumericID["Damage"]);
-                $this->socket->update_record($efaCloudUserID, "efa2autoincrement", 
+                $this->socket->update_record_matched($efaCloudUserID, "efa2autoincrement", 
+                        ["Sequence" => "efa2boatdamages"
+                        ], 
                         ["Sequence" => "efa2boatdamages","IntValue" => $setautoincrement,
                                 "LastModified" => time() . "000","LastModification" => "update"
                         ]);
@@ -858,7 +862,9 @@ class Efa_tables
                 $maxNumericID = $this->socket->find_records_sorted_matched($tablename, [], 1, "", 
                         "Reservation", false);
                 $setautoincrement = intval($maxNumericID["Reservation"]);
-                $this->socket->update_record($efaCloudUserID, "efa2autoincrement", 
+                $this->socket->update_record_matched($efaCloudUserID, "efa2autoincrement", 
+                        ["Sequence" => "efa2boatreservations"
+                        ], 
                         ["Sequence" => "efa2boatreservations","IntValue" => $setautoincrement,
                                 "LastModified" => time() . "000","LastModification" => "update"
                         ]);
@@ -867,7 +873,9 @@ class Efa_tables
                 $maxNumericID = $this->socket->find_records_sorted_matched($tablename, [], 1, "", "MessageId", 
                         false);
                 $setautoincrement = intval($maxNumericID["MessageId"]);
-                $this->socket->update_record($efaCloudUserID, "efa2autoincrement", 
+                $this->socket->update_record_matched($efaCloudUserID, "efa2autoincrement", 
+                        ["Sequence" => "efa2messages"
+                        ], 
                         ["Sequence" => "efa2messages","LongValue" => $setautoincrement,
                                 "LastModified" => time() . "000","LastModification" => "update"
                         ]);
@@ -1012,13 +1020,15 @@ class Efa_tables
                 $record_emptied[$key] = "REMOVE!";
                 $changes_needed = true;
             } elseif ((strcasecmp($key, "ChangeCount") != 0) && (strcasecmp($key, "LastModified") != 0) &&
-                     (strcasecmp($key, "LastModification") != 0)) {
+                     (strcasecmp($key, "LastModification") != 0) &&
+                     ! in_array($key, Efa_audit::$assert_not_empty)) {
                 // register change and clear value, if it still exists, except for ChangeCount,
-                // LastModification, and LastModified; because they will never be empty.
+                // LastModification, LastModified, and those which must not be empty; because they will never
+                // be empty.
                 if (strlen($record[$key]) > 0) {
                     if (in_array($key, Efa_tables::$int_fields[$tablename])) {
                         $record_emptied[$key] = 0; // integer values must not be ""
-                        $changes_needed = (intval($record[$key]) != 0);
+                        $changes_needed = $changes_needed || (intval($record[$key]) != 0);
                     } else {
                         $record_emptied[$key] = "";
                         $changes_needed = true;
@@ -1230,10 +1240,11 @@ class Efa_tables
         $ret = "";
         if ($get_record_counts_of_db) {
             $tnames = $this->socket->get_table_names(true);
-            foreach ($tnames as $tname) {
-                $record_count = $this->socket->count_records($tname, $filter, $condition);
-                $ret .= $tname . "=" . $record_count . ";";
-            }
+            foreach ($tnames as $tname)
+                if ($this->is_efa_table($tname)) {
+                    $record_count = $this->socket->count_records($tname, $filter, $condition);
+                    $ret .= $tname . "=" . $record_count . ";";
+                }
             // return the count, if not a full DB dump is requested.
             if (! $get_all_records_of_db)
                 return "300;" . $ret;
@@ -1655,7 +1666,117 @@ class Efa_tables
         $name = "";
         foreach (Efa_tables::$name_fields[$tablename] as $name_field)
             $name .= $record[$name_field] . " ";
-        if (strlen($name) > 0) $name = substr($name, 0, strlen($name) - 1);
+        if (strlen($name) > 0)
+            $name = substr($name, 0, strlen($name) - 1);
         return $name;
+    }
+
+    /**
+     * Read the types.efa2types file and convert it to a csv file
+     * 
+     * @param String $types_xml
+     *            the xml encoded efa2types which shall be converted
+     */
+    public function types_xml2csv (String $types_xml)
+    {
+        // read table, header and data
+        include_once '../classes/tfyh_xml.php';
+        $tfyh_xml = new Tfyh_xml();
+        $efa_root = $tfyh_xml->read_xml($types_xml);
+        
+        // write header to file
+        $efa_header = $efa_root->get_first_child("header");
+        $efa_type = $efa_header->get_first_child("type")->txt_o;
+        $header_file = "";
+        foreach ($tfyh_xml->xml_lines($efa_header, "") as $line) {
+            $header_file .= $line . "\n";
+        }
+        $ccfg_path = "../config/client_cfg";
+        mkdir($ccfg_path);
+        file_put_contents($ccfg_path . "/types.definition", $header_file);
+        
+        // read and write data to the csv table
+        $efa_data = $efa_root->get_first_child("data");
+        $type_records = $efa_data->get_children("record");
+        $cnt_records = count($type_records);
+        $header_line = true;
+        $csv = "";
+        foreach ($type_records as $record) {
+            $values = "";
+            foreach ($record->children as $field) {
+                // Note: the database expects UTF-8 keys and values. The XML values were
+                // UTF-8, but when read are changed to PHP-default encoding.
+                if ($header_line)
+                    $csv .= $field->id . ";";
+                $values .= $this->toolbox->encode_entry_csv(trim($field->txt_o)) . ";";
+            }
+            if ($header_line && (strlen($csv) > 0)) {
+                $csv = substr($csv, 0, strlen($csv) - 1) . "\n";
+            }
+            $header_line = false;
+            if (strlen($values) > 0)
+                $csv .= substr($values, 0, strlen($values) - 1) . "\n";
+        }
+        file_put_contents($ccfg_path . "/types.csv", $csv);
+    }
+
+    /**
+     * Read the <project>.efa2project file and convert it to a csv file
+     * 
+     * @param String $project_xml
+     *            the xml encoded efa2project which shall be converted
+     */
+    public function project_xml2csv (String $project_xml)
+    {
+        // read table, header and data
+        include_once '../classes/tfyh_xml.php';
+        $tfyh_xml = new Tfyh_xml();
+        $efa_root = $tfyh_xml->read_xml($project_xml);
+        
+        // write header to file
+        $efa_header = $efa_root->get_first_child("header");
+        $efa_type = $efa_header->get_first_child("type")->txt_o;
+        $header_file = "";
+        foreach ($tfyh_xml->xml_lines($efa_header, "") as $line) {
+            $header_file .= $line . "\n";
+        }
+        $ccfg_path = "../config/client_cfg";
+        mkdir($ccfg_path);
+        file_put_contents($ccfg_path . "/project.definition", $header_file);
+        
+        // read project data
+        $efa_data = $efa_root->get_first_child("data");
+        $project_records = $efa_data->get_children("record");
+        $cnt_records = count($project_records);
+        $csv_columns = [];
+        $csv_records = [];
+        foreach ($project_records as $record) {
+            $csv_record = [];
+            foreach ($record->children as $field) {
+                // Note: the database expects UTF-8 keys and values. The XML values were
+                // UTF-8, but when read are changed to PHP-default encoding.
+                if (! in_array($field->id, $csv_columns))
+                    $csv_columns[] = $field->id;
+                $csv_record[$field->id] = trim($field->txt_o);
+            }
+            $csv_records[] = $csv_record;
+        }
+        
+        // write csv headline
+        $csv = "";
+        foreach ($csv_columns as $csv_column)
+            $csv .= $csv_column . ";";
+        $csv = substr($csv, 0, strlen($csv) - 1) . "\n";
+        // write csv record data
+        foreach ($csv_records as $csv_record) {
+            foreach ($csv_columns as $csv_column) {
+                if (isset($csv_record[$csv_column]))
+                    $csv .= $this->toolbox->encode_entry_csv($csv_record[$csv_column]) . ";";
+                else
+                    $csv .= ";";
+            }
+            $csv = substr($csv, 0, strlen($csv) - 1) . "\n";
+        }
+        file_put_contents($ccfg_path . "/project.csv", $csv);
     }
 }

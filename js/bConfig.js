@@ -23,8 +23,8 @@ var $_formTemplates = {
 
 		startTrip :
 `tags;required;name;value;label;type;class;size;maxlength
-<div class='w3-row'><div class='w3-col l2'>;!;EntryId;;Fahrt Nummer;text;display-only;8;50
-</div><div class='w3-col l2'>;!;Logbookname;;Fahrtenbuch;text;display-only;8;50
+<div class='w3-row'><div class='w3-col l2'>;!;EntryId;;Fahrt Nummer;text;display-bold;8;50
+</div><div class='w3-col l2'>;!;Logbookname;;Fahrtenbuch;text;display-bold;8;50
 </div></div><div class='w3-row'><div class='w3-col l2'>;*;Date;;Beginn am;date;;12;50
 </div><div class='w3-col l2'>;*;StartTime;;Beginn um;text;;8;50
 </div></div><div class='w3-row'><div class='w3-col l2'>;*;BoatId;;Boot;text;;18;50
@@ -50,8 +50,8 @@ var $_formTemplates = {
 
 		endTrip :
 `tags;required;name;value;label;type;class;size;maxlength
-<div class='w3-row'><div class='w3-col l2'>;!;EntryId;;Fahrt Nummer;text;;8;50
-</div><div class='w3-col l2'>;*;Logbookname;!;Fahrtenbuch;text;;8;50
+<div class='w3-row'><div class='w3-col l2'>;!;EntryId;;Fahrt Nummer;text;display-bold;8;50
+</div><div class='w3-col l2'>;;Logbookname;!;Fahrtenbuch;text;display-bold;8;50
 </div></div><div class='w3-row'><div class='w3-col l2'>;!;Date;;Beginn am;date;;12;50
 </div><div class='w3-col l2'>;!;StartTime;;Beginn um;text;;8;50
 </div></div><div class='w3-row'><div class='w3-col l2'>;;EndDate;;Ende am;date;;12;50
@@ -80,7 +80,7 @@ var $_formTemplates = {
 <div class='w3-row'><div class='w3-col l1'>;;_no_input;;<h5>Bitte die Schadensmeldung vollständig eintragen.</h5>;;;;
 </div></div><div class='w3-row'><div class='w3-col l2'>;*;BoatId;;Name des Bootes;text;;18;50
 </div><div class='w3-col l2'>;*;ReportedByPersonId;;gemeldet durch;text;;18;50
-</div></div><div class='w3-row'>div class='w3-col l2'>;*;ReportDate;;entstanden am;date;;18;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;*;ReportDate;;entstanden am;date;;18;50
 </div><div class='w3-col l2'>;*;ReportTime;;um (Uhrzeit);text;;18;50
 </div></div><div class='w3-row'><div class='w3-col l2' style='padding-top:15px'>;;Claim;;Versicherungsschaden?;checkbox;;18;50
 </div><div class='w3-col l2'>;*;\

@@ -133,7 +133,7 @@ if (! isset($_SESSION["context"]))
 elseif (strcmp($_SESSION["context"], $context) != 0) {
     // wrong tenant. Clear all user settings, because they stem from a different tenant.
     $prev_context = $_SESSION["context"];
-    $toolbox->app_sessions->session_close();
+    $toolbox->app_sessions->session_close("Forbidden context change", "");
     $script_completed = true;
     $toolbox->display_error("Unzulässiger Kontextwechsel", 
             "Ein Wechsel vom Kontext: " . $prev_context . " zu " . $context .

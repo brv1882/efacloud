@@ -16,7 +16,7 @@ $tmp_upload_file = "";
 // if validation fails, the same form will be displayed anew with error messgaes
 $todo = ($done == 0) ? 1 : $done;
 $form_errors = "";
-$form_layout = "../config/layouts/import_persons";
+$form_layout = "../config/layouts/personen_importieren";
 
 // ======== Start with form filled in last step: check of the entered values.
 if ($done > 0) {
@@ -65,28 +65,11 @@ if ($done > 0) {
                     $r ++;
                     $import_check_prefix = "Prüfe Zeile " . $r . ": " . $record["FirstName"] . " " .
                              $record["LastName"];
-                    if ($mode == 3) {
-                        $mapped_record = $efa_audit->map_extra_fields($record, $_SESSION["io_table"]);
-                        $record = false; // invalidate the original record.
-                        if (! is_array($mapped_record))
-                            $import_check_errors .= $import_check_prefix . " - $mapped_record.<br>";
-                        else {
-                            $delimited_record = $efa_audit->delimit_version(6, $mapped_record, 
-                                    $mapped_record["ValidFrom"], false, false);
-                            if (! is_array($delimited_record))
-                                $import_check_errors .= $import_check_prefix . " - $delimited_record.<br>";
-                            else
-                                $record = $delimited_record;
-                        }
-                    }
-                    if ($record !== false) {
-                        $modification_result = $efa_audit->modify_version(6, $record, $mode, false, false);
-                        if (strlen($modification_result) == 0)
-                            $import_check_info .= $import_check_prefix . " - ok.<br>";
-                        else
-                            $import_check_errors .= $import_check_prefix . " - " . $modification_result .
-                                     ".<br>";
-                    }
+                    $modification_result = $efa_audit->modify_version(6, $record, $mode, false, false);
+                    if (strlen($modification_result) == 0)
+                        $import_check_info .= $import_check_prefix . " - ok.<br>";
+                    else
+                        $import_check_errors .= $import_check_prefix . " - " . $modification_result . ".<br>";
                 }
                 // only move on, if import did not return an error.
                 if (strlen($import_check_errors) == 0)
@@ -106,27 +89,11 @@ if ($done > 0) {
             $r ++;
             $import_done_prefix = "Führe aus Zeile " . $r . ": " . $record["FirstName"] . " " .
                      $record["LastName"];
-            if ($mode == 3) {
-                $mapped_record = $efa_audit->map_extra_fields($record, $_SESSION["io_table"]);
-                $record = false; // invalidate the original record.
-                if (! is_array($mapped_record))
-                    $import_done_info .= $import_done_prefix . " - $mapped_record.<br>";
-                else {
-                    $delimited_record = $efa_audit->delimit_version(6, $mapped_record, 
-                            $mapped_record["ValidFrom"], true, true);
-                    if (! is_array($delimited_record))
-                        $import_done_info .= $import_done_prefix . " - $delimited_record.<br>";
-                    else
-                        $record = $delimited_record;
-                }
-            }
-            if ($record !== false) {
-                $modification_result = $efa_audit->modify_version(6, $record, $mode, true, true);
-                if (strlen($modification_result) == 0)
-                    $import_done_info .= $import_done_prefix . " - ok.<br>";
-                else
-                    $import_done_info .= $import_done_prefix . " - " . $modification_result . ".<br>";
-            }
+            $modification_result = $efa_audit->modify_version(6, $record, $mode, true, true);
+            if (strlen($modification_result) == 0)
+                $import_done_info .= $import_done_prefix . " - ok.<br>";
+            else
+                $import_done_info .= $import_done_prefix . " - " . $modification_result . ".<br>";
         }
         
         unlink("../log/io/" . $_SESSION["io_file"]);
@@ -161,51 +128,55 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 if ($todo == 1) { // step 1. Texts for output
     ?>
 	<p>Dateiformat und Feldnamen</p>
-	<p>Die zu importierende csv-Datei muss als mit Trenner: ';' und
-		Textmarker: '"' und in der ersten Zeile die technischen Feldnamen der
-		Datenbanktabelle ausweisen (vgl. Menüfunktion "Konfigurieren >
-		Datenstruktur"). Alternativ sind auch Extrafelder zulässig (s.u.).
-		Groß-Klein-Schreibung ist relevant. Werden ungültige Feldnamen
-		verwendet, wird der Import abgelehnt.</p>
+	<ol>
+		<li>Die zu importierende csv-Datei muss als mit Trenner: ';' und
+			Textmarker: '"' und in der ersten Zeile die technischen Feldnamen der
+			Datenbanktabelle ausweisen (Liste der Namen vgl. Menüfunktion
+			"efaCloud einstellen > Datenstruktur"). Alternativ sind die
+			Extrafelder 'StatusName', 'ValidFromDate', 'InvalidFromDate' zulässig
+			(s.u.).</li>
+		<li>Groß-Klein-Schreibung ist bei den Namen relevant. Werden ungültige
+			Feldnamen verwendet, wird der Import abgelehnt.</li>
+	</ol>
 	<p>Extrafelder für vereinfachten Import:</p>
 	<ol>
 		<li>StatusName: Die zulässigen Werte für StatusName sind die, die in
 			efa2status als Namen angegeben sind, z. B. "Gast" (ohne die
-			Anführungszeichen). Der Wert wird dann durch die Id ersetzt beim
-			Import.</li>
+			Anführungszeichen). Der Wert wird dann durch die Id ersetzt und in
+			das Feld StatusId geschrieben.</li>
 		<li>ValidFromDate, InvalidFromDate: anstelle des schwer lesbaren
 			Unix-Zeitstempels kann hier ein Datum im Format TT.MM.JJJJ angegeben
-			werden, das dann in einen Zeitstempel umgewandelt wird beim Import,
-			der in die Felder ValidFrom/InvalidFrom geschrieben wird.
+			werden, das dann in einen Zeitstempel umgewandelt wird beim Import
+			und in die Felder ValidFrom/InvalidFrom geschrieben wird.
 	
 	</ol>
-	<p>Es gibt drei Modi. Welcher Modus für einen Datensatz gewählt wird,
-		wird an Hand der gelieferten Daten gemäß der BEDINGUNG entschieden:</p>
+	<p>Importoptionen:</p>
 	<ol>
-		<li><b>neu anlegen:</b> neue Person als neuen Datensatz hinzufügen.<br>BEDINGUNG:
-			'Id' leer oder fehlend, 'FirstName' und 'LastName' nicht leer und
-			eine Person mit diesem Namen NICHT VORHANDEN. <br>Dazu erforderlich:
-			'Gender' (MALE oder FEMALE), 'StatusName/StatusId' nicht leer. Es
-			wird empfohlen 'ValidFrom/ValidFromDate' ebenfalls anzugeben,
-			alternativ wird die aktuelle Uhrzeit verwendet.</li>
-		<li><b>ändern:</b> den aktuell gültigen Datensatz der Person ändern.
-			Hierzu zählt auch die Begrenzung der Gültigkeit eines noch gültigen
-			Datensatzes. <br>BEDINGUNG: 'FirstName' und 'LastName' nicht leer und
-			eine Person mit diesem Namen ist VORHANDEN. Wenn das Feld 'Id' nicht
-			leer ist definiert es anstelle des Namens den auzuwählenden Datensatz
-			so dass auch der Name geändert werden kann. Das Feld
-			'ValidFrom/ValidFromDate' müssen fehlen oder leer sein.</li>
-		<li><b>abgrenzen:</b> Den aktuellen Datensatz kopieren, und die Kopie
-			wie oben ändern. Gleichzeitig die Gültigkeit des bisher aktuellen
-			Datensatzes auf die Zeit bis zum Gültgkeitsstart des neuen
-			Datensatzes begrenzen. <br>BEDINGUNG: wie bei ändern, zusätzlich muss
-			das Feld 'ValidFrom/ValidFromDate' für den Gültgkeitsstart des neuen
-			Datensatzes gesetzt sein.</li>
+		<li><b>neu anlegen:</b> eine neue Person als Datensatz hinzufügen.<br>Das
+			Datenfeld 'Id' darf nicht vorhanden sein, 'FirstName' und 'LastName'
+			dürfen nicht leer und eine Person mit diesem Namen darf noch nicht
+			vorhanden sein. 'Gender' muss MALE oder FEMALE sein, und 'StatusName'
+			bzw. 'StatusId' einen gültigen Wert enthalten. Es wird empfohlen
+			'ValidFrom' bzw. 'ValidFromDate' ebenfalls anzugeben, alternativ wird
+			die aktuelle Uhrzeit verwendet.<br> <i>ein Beispiel:<br>
+				FirstName;LastName;Gender;Birthday;StatusName;ValidFromDate;MembershipNo<br>
+				Max;Kustermann;MALE;2005;Junior(in);01.10.2022;4711
+		</i></li>
+		<li><b>ändern:</b> den aktuell gültigen Datensatz einer Person ändern.
+			<br> Die Datenfelder 'FirstName' und 'LastName' und/oder 'Id' müssen
+			eine vorhandene und aktuell gültige Person eindeutig definieren. Wenn
+			alle drei Felder angegeben sind, hat das Feld 'Id' Vorrang für die
+			Auswahl. Die Felder 'ValidFrom' und 'ValidFromDate' müssen fehlen
+			oder leer sein.<br> <i>ein Beispiel (ändert den Namen und den
+				Status):<br> Id;FirstName;LastName;StatusName<br>
+				12345678-1234-5678-90ab-1234567890ab;Max;Mustermann;Senior(in)</i></li>
 	</ol>
-	<p>Zweistufiges Verfahren: Prüfung und Update</p>
-	<p>Im ersten Schritt wird die Tabelle hochgeladen und geprüft. Im
-		zweiten Schritt findet der Import statt. Dieser muss explizit
-		bestätigt werden.</p>
+	<p>Immer erst eine Prüfung vor Import</p>
+	<ol>
+		<li>die Tabelle hochladen. Es wird angezeigt, ob ein Import möglich
+			ist und was dabei geschehen wird.</li>
+		<li>Import bestätigen. Die Datensätze werden importiert.</li>
+	</ol>
 		<?php
     echo $toolbox->form_errors_to_html($form_errors);
     echo $form_to_fill->get_html(true); // enable file upload

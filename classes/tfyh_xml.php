@@ -104,7 +104,7 @@ class Tfyh_xml
     }
 
     /**
-     * Read an XML string into $this->xml_tree. Encoding must be UTF-8. READ PER 1,000 TAGS READ.
+     * Read an XML string into $this->xml_tree. Encoding must be UTF-8.
      * 
      * @param String $xml
      *            the String to be parsed

@@ -1,7 +1,8 @@
 <?php
 
 /**
- * static class file for the sql definition of efa tables to build and adjust the table layout.
+ * static class file for the sql definition of efa tables to build and adjust the table layout. The expected
+ * layout is defined in Efa_tables::$db_layout_version_target.
  */
 class Efa_db_layout
 {
@@ -241,7 +242,7 @@ class Efa_db_layout
             $matched = true;
             $not_matching = "Vergleiche Version " . $v . "\n";
             $not_matching .= "-------------------\n";
-            $db_layout = self::db_layout($v); 
+            $db_layout = self::db_layout($v);
             foreach ($db_layout as $table_name => $table_columns) {
                 if (isset($db_layout_read[$table_name])) {
                     foreach ($db_layout[$table_name] as $column_name => $column_definition) {

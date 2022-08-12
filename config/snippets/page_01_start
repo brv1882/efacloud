@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="../resources/w3-style.css">
   <link rel="stylesheet" href="../resources/app-style.css">
+  <link rel="stylesheet" href="../resources/efacloud-style.css">
   <link rel="icon" href="../resources/favicon.ico" type="image/x-icon">
   <link rel="shortcut icon" href="../resources/favicon.ico" type="image/x-icon" />
 </head>

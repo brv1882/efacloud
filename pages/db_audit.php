@@ -21,6 +21,12 @@ include_once '../classes/efa_db_layout.php';
 $improve = (isset($_GET["do_improve"])) ? $_GET["do_improve"] : "";
 $do_improve = (strcmp($improve, "now") == 0);
 $improvements = "";
+
+$delete_corrupt = (isset($_GET["delete_corrupt"]) && strcasecmp($_GET["delete_corrupt"], "yes") == 0);
+$mark_duplicates = (isset($_GET["mark_duplicates"]) && strcasecmp($_GET["mark_duplicates"], "yes") == 0);
+$set_missing_defaults = (isset($_GET["set_missing_defaults"]) &&
+         strcasecmp($_GET["set_missing_defaults"], "yes") == 0);
+
 // maximum number of records which will be added an ecrid, if missing, in one go. Should never be hit.
 $max_add_ecrids = 2000;
 if ($do_improve) {
@@ -78,8 +84,8 @@ $table_record_count_list .= "<li>in Summe [" . $total_record_count . "] Datensä
 // ===== Layout implementation check
 $efa_tools->change_log_path("../log/sys_db_audit.log");
 $verification_result = "<b>Ergebis der Layoutprüfung</b><ul><li>";
-$db_layout_verified = $efa_tools->update_database_layout($_SESSION["User"][$toolbox->users->user_id_field_name],
-        $efa_tables->db_layout_version_target, true);
+$db_layout_verified = $efa_tools->update_database_layout(
+        $_SESSION["User"][$toolbox->users->user_id_field_name], $efa_tables->db_layout_version_target, true);
 if ($db_layout_verified) {
     $verification_result .= "OK. Das Layout stimmt mit dem Standard der Programmversion = Version " .
              $efa_tables->db_layout_version_target . " überein.";
@@ -119,8 +125,10 @@ if ($total_no_ecrids_count > 0) {
 // ===== data integrity auditing
 include_once "../classes/efa_audit.php";
 $efa_audit = new Efa_audit($efa_tables, $toolbox);
-$data_integrity_result = $efa_audit->data_integrity_audit();
-$data_integrity_result_list = "<b>Ergebnis der Datenintegritätsprüfung</b><ul>" . $data_integrity_result . "</ul>";
+$data_integrity_result = $efa_audit->data_integrity_audit($delete_corrupt, $mark_duplicates, 
+        $set_missing_defaults);
+$data_integrity_result_list = "<b>Ergebnis der Datenintegritätsprüfung</b><ul>" . $data_integrity_result .
+         "</ul>";
 
 // ===== start page output
 echo file_get_contents('../config/snippets/page_01_start');

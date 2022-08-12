@@ -28,17 +28,27 @@ users.ownerid_fields=efaCloudLog.Author;efaCloudCleansed.Author
 config.app_name="efaCloud"
 config.app_url="https://www.efacloud.org"
 config.changelog_name="efaCloudLog"
-config.parameter_table_name="efaCloudConfig"
+config.parameter_table_name=""
 config.forbidden_dirs="all_mails_localhost,classes,config,config/access,install, \
   log,log/backup,log/contentsize,log/sessions,log/uploads,pdfs, \
   tasks_queue,tcpdf,templates,uploads"
 config.public_dirs="api,forms,js,license,pages,public,resources"
 
+# module config.php, default values
+default.DamageAgeDays=720
+default.ReservationAgeDays=720
+default.ClubworkAgeDays=720
+default.TripAgeDays=720
+default.MessageAgeDays=720
+default.PersonsAgeDays=1810
+default.PurgeDeletedAgeDays=365
+
 # module init.php
 init.max_inits_per_hour=3000
 init.max_errors_per_hour=100
 init.max_concurrent_sessions=25
-init.max_session_duration=600
+init.max_session_duration=86400
+init.max_session_keepalive=600
 
 # module logger
 logger.obsolete=["activities.txt","actPerDay.txt","dones.txt","fails.txt","warns.txt", \
@@ -50,7 +60,7 @@ logger.logs=["api_errors.log","api_info.log","api_warnings.log", \
   "app_audit.log","app_errors.log","app_info.log","app_init_login_error.log","app_bulk_txs.log","app_warnings.log", \
   "debug_api.log","debug_app.log","sql_debug.log","debug_posttx.log","debug_init.log", \
   "efa_tools.log", \
-  "sys_cronjobs.log","sys_db_audit.log","sys_shutdowns.log","sys_timestamps.log" \
+  "sys_cronjobs.log","sys_db_audit.log","sys_shutdowns.log","sys_sql_errors.log","sys_timestamps.log" \
 ]
 
 # module api, client handler.php - not relevant in efaCloud
@@ -76,5 +86,7 @@ history.efa2sessiongroups="ecrhis"
 maxversions.efa2sessiongroups=20
 history.efaCloudUsers="ecrhis"
 maxversions.efaCloudUsers=20
+history.efaCloudDoodle="ecrhis"
+maxversions.efaCloudDoodle=20
 # --- border history section ---
 #

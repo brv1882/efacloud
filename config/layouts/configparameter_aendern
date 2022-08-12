@@ -1,23 +1,36 @@
 tags;required;name;value;label;type;class;size;maxlength
-<div class='w3-row'><div class='w3-col l1'><b>Stammdaten</b>;; \
-  synch_period;;<br>Der zeitliche Abstand zwischen zwei automatischen Download-Synchronisationen in Sekunden.<br>Standard ist 3600 Sekunden.;text;;12;20
-</div></div><div class='w3-row'><div class='w3-col l1'>;; \
-  synch_check_period;;Der zeitliche Abstand zwischen zwei automatischen Änderungschecks in Sekunden.<br>Standard ist 60 Sekunden.  \
-  Um automatische Änderungschecks abzuschalten bitte 0 eingeben.;text;;12;20
-</div></div><div class='w3-row'><div class='w3-col l1'>;; \
+<div class='w3-row'><div class='w3-col l1'>;;_no_input;;<b>Synchronisation</b>;;;;
+</div></div><div class='w3-row'><div class='w3-col l2'>;; \
+  synch_period;;Zeit in Sekunden zwischen zwei automatischen Download-Synchronisationen. Standard ist 3600.;text;;12;20
+</div><div class='w3-col l2'>;; \
+  synch_check_period;;Zeit in Sekunden zwischen zwei automatischen Änderungschecks. Standard ist 60, abschalten mit 0.;text;;12;20
+</div></div><div class='w3-row'><div class='w3-col l1'>;;_no_input;;<br><b>Stammdaten Verein</b>;;;;
+</div></div><div class='w3-row'><div class='w3-col l2'>;; \
   mail_subscript;;Unterschrift unter Mails, die vom System erzeugt werden;text;;30;250
-</div></div><div class='w3-row'><div class='w3-col l1'>;; \
+</div><div class='w3-col l2'>;; \
   mail_footer;;"Fußzeile unter Mails, die vom System erzeugt werden";text;;30;250
-</div></div><div class='w3-row'><div class='w3-col l1'>;; \
+</div></div><div class='w3-row'><div class='w3-col l2'>;; \
   system_mail_sender;;'no-reply'-Absender der Mails, die vom System erzeugt werden;text;;30;250
-</div></div><div class='w3-row'><div class='w3-col l1'>;; \
-  mail_schriftwart;;Mail-Adresse für den Kopie-Empfänger der Workflowbenachrichtigungen.;text;;30;250
-</div></div><div class='w3-row'><div class='w3-col l1'>;; \
+</div><div class='w3-col l2'>;; \
   acronym;;Die Abkürzung, die für Euren Verein verwendet werden soll;text;;12;20
-</div></div><div class='w3-row'><div class='w3-col l1'>;; \
+</div></div><div class='w3-row'><div class='w3-col l2'>Fahrtenbuch für efaWeb und den Fahrtenbuchversand<br>;; \
+  current_logbook;;'JJJJ' für aktuelle Jahreszahl, also z.B. 'JJJJ_BootshausA' für z.B. '2022_BootshausA';text;;12;20
+</div><div class='w3-col l2'>;; \
   sports_year_start;;Wann startet das Fahrtenbuchjahr?; \
   "select 1=01.01.;2=01.02.;3=01.03.;4=01.04.;5=01.05.;6=01.06.;7=01.07.;8=01.08.;9=01.09.;10=01.10.;11=01.11.;12=01.12.";;12;20
-</div></div><div class='w3-row'><div class='w3-col l1'><br><b>Informationsmanagement</b><br>;; \
+</div></div><div class='w3-row'><div class='w3-col l1'>;;_no_input;;<br><b>Benachrichtigungen</b>;;;;
+</div></div><div class='w3-row'><div class='w3-col l1'>;; \
+  mail_schriftwart;;Mail-Adresse Kopie-Empfänger von Workflowbenachrichtigungen.;text;;30;250
+</div></div><div class='w3-row'><div class='w3-col l2'>;; \
+  notify_damage_to;;Mail-Adresse für Hinweise auf neuen Bootsschaden;text;;30;250
+</div><div class='w3-col l2'><br>;; \
+  notify_damage_unusable_only;;nur bei Schadensklasse 'unbenutzbar' versenden;checkbox;;;
+</div></div><div class='w3-row'><div class='w3-col l2'>;; \
+  notify_admin_message_to;;Mail-Adresse für Hinweise auf neue Nachricht an admin;text;;30;250
+</div><div class='w3-col l2'>;; \
+  notify_reservation_to;;Mail-Adresse für Hinweise auf neue Bootsreservierung;text;;30;250
+</div></div><div class='w3-row'><div class='w3-col l1'>;;_no_input;;<br><b>Informationsweitergabe</b>;;;;
+</div></div><div class='w3-row'><div class='w3-col l1'>;; \
   public_onthewater;;Information über Boote auf dem Wasser ohne login sichtbar;checkbox;;2;2
 </div></div><div class='w3-row'><div class='w3-col l1'>;; \
   public_notavailable;;Information über nicht verfügbare Boote ohne login sichtbar;checkbox;;2;2
@@ -25,7 +38,7 @@ tags;required;name;value;label;type;class;size;maxlength
   public_notusable;;Information über Boote mit Bootsschaden ohne login sichtbar;checkbox;;2;2
 </div></div><div class='w3-row'><div class='w3-col l1'>;; \
   public_reserved;;Information über Bootsreservierungen ohne login sichtbar;checkbox;;2;2
-</div></div><div class='w3-row'><div class='w3-col l1'<br><b>Extras</b><br>;; \
+</div></div><div class='w3-row'><div class='w3-col l1'<br><i>Extras</i><br>;; \
   debug_support;;<i>Nur für Supportzwecke:</i> Debug-Informationen mitschreiben;checkbox;;2;2
 </div></div><div class='w3-row'><div class='w3-col l1'>;; \
   backup;;<i>Nicht empfohlen, verlangsamt den ersten Login des Tages deutlich:</i> Tabellen sichern bei der täglichen Routine;checkbox;;2;2
@@ -34,8 +47,6 @@ tags;required;name;value;label;type;class;size;maxlength
   <li>Job-Optionen: 'persLogbook' = Versand des persönlichen Fahrtenbuchs an alle Personen, die in efa2persons eine E-Mail Adresse hinterlegt haben oder  \
   'monitoring' = Versand des Regelberichts zur Überwachung an alle efaCloudUser mit der Rolle 'admin'</li></ul>;; \
   configured_jobs;;Automatische Abläufe, die als 'cronjobs' angestoßen werden. Ein Job pro Zeile, als 'Tagangabe Typ' z.B. 'M31 persLogbook'.;textarea;;4;
-</div></div><div class='w3-row'><div class='w3-col l1'><br><b>Aktuelles Fahrtenbuch</b><br>;; \
-  current_logbook;;Für efaWeb und den Fahrtenbuchversand zu nutzendes Fahrtenbuchs<br>('JJJJ' für aktuelle Jahreszahl, also z.B. 'JJJJ_BootshausA' für z.B. '2022_BootshausA');text;;12;20
 </div></div><div class='w3-row'><div class='w3-col l1'><br><b>Stilvorgaben</b><br>(Ausprobieren mit 'efa-Daten > Testversand persönliches Fahrtenbuch')<br>;; \
   pers_logbook_cols;;Spalten im persönlichen Fahrtenbuch (Komma-separiert, möglich sind: Fahrtnummer,Datum,Boot,Steuermann,Mannschaft,Abfahrt,Ankunft,Ziel,Kilometer);text;;95%;200
 </div></div><div class='w3-row'><div class='w3-col l2'>;;pers_logbook_table;;"Stilvorgabe Tabelle (Inline Syntax, z. B.: border:1px solid #000088;)";text;;90%;200
@@ -59,6 +70,8 @@ tags;required;name;value;label;type;class;size;maxlength
 </div><div class='w3-col l4'>;;PersonsAgeDays;;Personen, ungültig seit;text;;8;8
 </div></div><div class='w3-row'><div class='w3-col l1'>;;_no_input;;<br><b>Löschbenachrichtigung</b>;;;;
 </div></div><div class='w3-row'><div class='w3-col l2'>;;PurgeDeletedAgeDays;;Wie lange nach der Löschung eines Datensatzes sollen Clients darüber informiert werden?;text;;8;8
+</div></div><div class='w3-row'><div class='w3-col l1'><br><b>Projektkonfiguration</b><br>;; \
+  ProjectCfgClientID;;Id des Clients, von dem die Projektkonfiguration übernommen werdn soll;text;;8;8
 </div></div><p></p><div class='w3-row' style='margin-top:20px'><div class='w3-col l1'>;; \
   submit;Übernehmen;;submit;formbutton;;
 </div></div>;;_no_input;;;;;;

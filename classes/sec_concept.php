@@ -183,7 +183,7 @@ class Sec_concept
                      " " . $privileged_row[4] . "<br>";
         $this->variables["privilegierteNutzer"] = $privileged_str;
         // efaAdminNutzer
-        $efa_admins_list = new Tfyh_list("../config/lists/verwalten", 7, "Nutzer mit efa-Admin Rechten", 
+        $efa_admins_list = new Tfyh_list("../config/lists/verwalten", 4, "Nutzer mit efa-Admin Rechten", 
                 $this->socket, $this->toolbox);
         $efa_admins_rows = $efa_admins_list->get_rows();
         $efa_admins_str = "";

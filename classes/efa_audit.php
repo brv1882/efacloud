@@ -1,7 +1,8 @@
 <?php
 
 /**
- * class file for the efaCloud table auditing
+ * class file for the efaCloud table auditing. The expected layout is defined in
+ * Efa_tables::$db_layout_version_target.
  */
 class Efa_audit
 {
@@ -73,9 +74,20 @@ class Efa_audit
             ],"efa2boats" => ["Name"
             ],"efa2destinations" => ["Name"
             ],"efa2groups" => ["Name"
-            ],"efa2persons" => ["StatusId","Gender"
+            ],"efa2logbook" => ["Date" // ,"Logbookname" is a key field
+            ],
+            "efa2persons" => ["StatusId","Gender" // "FirstLastName" is a system field and will be created.
             ],"efa2project" => [],"efa2admins" => ["Name","Password"
             ],"efa2types" => ["Category","Type","Value"
+            ]
+    ];
+
+    /**
+     * Defaults values for some of those columns that must not be empty.
+     */
+    public static $defaults_not_empty = [
+            "efa2boatdamages" => ["Severity" => "LIMITEDUSEABLE"
+            ],"efa2boatreservations" => ["Type" => "ONETIME"
             ]
     ];
 
@@ -109,6 +121,9 @@ class Efa_audit
     private static $uuid_list_id = ["efa2boats" => 1,"efa2clubwork" => 2,"efa2crews" => 3,
             "efa2destinations" => 4,"efa2groups" => 5,"efa2persons" => 6,"efa2sessiongroups" => 7,
             "efa2statistics" => 8,"efa2status" => 9,"efa2waters" => 10
+    ];
+
+    private static $no_content_fields = ["ChangeCount","LastModified","LastModification","ecrowm"
     ];
 
     /**
@@ -166,6 +181,61 @@ class Efa_audit
         return true;
     }
 
+    /**
+     * Checks whether the field does not contain a relevant field, i.e. no field which is neither
+     * $this->no_content_fields nor Efa_tables::$key_fields[$tablename.
+     * 
+     * @param array $tablename
+     *            the table out of which the record shall be deleted.
+     * @param array $record
+     *            record which shall be deleted.
+     * @return true, if no used field was found except keys and history. Else false
+     */
+    private function is_content_empty (String $tablename, array $record)
+    {
+        foreach ($record as $key => $value) {
+            $is_relevant_field = ! in_array($key, Efa_tables::$key_fields[$tablename]);
+            $is_relevant_field = $is_relevant_field && (strcasecmp($key, "ecrid") != 0) &&
+                     (strcasecmp($key, "ecrown") != 0) && (strcasecmp($key, "ecrhis") != 0);
+            $is_relevant_field = $is_relevant_field && ! in_array($key, self::$no_content_fields);
+            if ($is_relevant_field && ! is_null($value) && (strlen($value) > 0))
+                return false;
+        }
+        return true;
+    }
+
+    /**
+     * Increment change count and update LastModified and LastModification
+     * 
+     * @param String $user_id
+     *            the user id which shll be put to the change log.
+     * @param String $table_name
+     *            the table name in which the record shall be updated
+     * @param array $record
+     *            the record itself, may be incomplete, but must contain an ecrid
+     * @param String $lastModification
+     *            the lastModification field, defaults to "update", set to "delete", if so needed.
+     * @return the update result (empty, if ok, else error message).
+     */
+    private function update_record (int $user_id, String $table_name, array $record, 
+            String $lastModification = "update")
+    {
+        if (! isset($record["ecrid"]) || (strlen($record["ecrid"]) < 5))
+            return "No update possible. Missing ecrid key.";
+        $current = $this->socket->find_record_matched($table_name, ["ecrid" => $record["ecrid"]
+        ]);
+        if ($current === false)
+            return "No update possible. No match for provided ecrid key.";
+        $current_change_count = (isset($record["ChangeCount"])) ? $record["ChangeCount"] : 0;
+        $record["ChangeCount"] = $current_change_count + 1;
+        $record["LastModified"] = strval(time()) . "000";
+        $record["LastModification"] = $lastModification;
+        $update_message = $this->socket->update_record_matched($user_id, $table_name, 
+                ["ecrid" => $record["ecrid"]
+                ], $record);
+        return $update_message;
+    }
+
     /* --------------------------------------------------------------------------------------- */
     /* --------------- DATA BASE SCAN OF DOUBLETS ETC ---------------------------------------- */
     /* --------------------------------------------------------------------------------------- */
@@ -174,11 +244,16 @@ class Efa_audit
      * 
      * @return string the audit result.
      */
-    public function data_integrity_audit ()
+    public function data_integrity_audit (bool $delete_corrupt, bool $mark_duplicates, 
+            bool $set_missing_defaults)
     {
         include_once "../classes/tfyh_list.php";
+        $audit_user = $_SESSION["User"];
+        $audit_user_id = $audit_user[$this->toolbox->users->user_id_field_name];
+        $user_is_admin = (strcasecmp($_SESSION["User"]["Rolle"], "admin") == 0);
         
         $lists = [];
+        $lists["corrupt"] = [];
         $lists["uuidnames"] = [];
         $lists["uuidref"] = [];
         $lists["duplicate"] = [];
@@ -193,7 +268,11 @@ class Efa_audit
         // =========================================================
         $audit_result = "<li><b>Liste der UUIDs in der Datenbank:</b></li>\n<ul>";
         $all_ids_count = 0;
-        for ($list_id = 1; $list_id <= 11; $list_id ++) {
+        $list_definitions = new Tfyh_list("../config/lists/efaAuditUUIDnames", 0, "", $this->socket, 
+                $this->toolbox);
+        $list_definitions = $list_definitions->get_all_list_definitions();
+        for ($list_index = 0; $list_index < count($list_definitions); $list_index ++) {
+            $list_id = intval($list_definitions[$list_index]["id"]);
             $lists["uuidnames"][$list_id] = new Tfyh_list("../config/lists/efaAuditUUIDnames", $list_id, "", 
                     $this->socket, $this->toolbox);
             $table_name = $lists["uuidnames"][$list_id]->get_table_name();
@@ -227,7 +306,11 @@ class Efa_audit
         // ================================================
         $audit_result .= "<li><b>Liste der Referenzen auf UUIDs in der Datenbank:</b></li>\n<ul>";
         $all_id_refs_count = 0;
-        for ($list_id = 1; $list_id <= 11; $list_id ++) {
+        $list_definitions = new Tfyh_list("../config/lists/efaAuditUUIDrefs", 0, "", $this->socket, 
+                $this->toolbox);
+        $list_definitions = $list_definitions->get_all_list_definitions();
+        for ($list_index = 0; $list_index < count($list_definitions); $list_index ++) {
+            $list_id = intval($list_definitions[$list_index]["id"]);
             $lists["uuidref"][$list_id] = new Tfyh_list("../config/lists/efaAuditUUIDrefs", $list_id, "", 
                     $this->socket, $this->toolbox);
             $table_name = $lists["uuidref"][$list_id]->get_table_name();
@@ -291,10 +374,82 @@ class Efa_audit
         $audit_result .= "<li>In Summe $all_id_refs_count Referenzen auf UUIDs in der Datenbank.</li>\n";
         $audit_result .= "</ul>";
         
+        // continue with check for corrupt data
+        // ====================================
+        $audit_result .= "<li><b>Liste der korrupten Datensätze:</b><br>Die automatische Korrektur löscht " .
+                 "alle korrupten Datensätze, die inhaltlich leer sind.</li>\n<ul>";
+        $all_id_refs_count = 0;
+        $list_definitions = new Tfyh_list("../config/lists/efaAuditCorruptData", 0, "", $this->socket, 
+                $this->toolbox);
+        $list_definitions = $list_definitions->get_all_list_definitions();
+        $corrupt_records_cnt_all = 0;
+        $corrupt_records_list_all = "";
+        for ($list_index = 0; $list_index < count($list_definitions); $list_index ++) {
+            $corrupt_records_cnt = 0;
+            $corrupt_records_list = "";
+            $list_id = intval($list_definitions[$list_index]["id"]);
+            $lists["corrupt"][$list_id] = new Tfyh_list("../config/lists/efaAuditCorruptData", $list_id, "", 
+                    $this->socket, $this->toolbox);
+            $table_name = $lists["corrupt"][$list_id]->get_table_name();
+            $ecrid_index = $lists["corrupt"][$list_id]->get_field_index("ecrid");
+            $lastModification_index = $lists["corrupt"][$list_id]->get_field_index("LastModification");
+            $lastModified_index = $lists["corrupt"][$list_id]->get_field_index("LastModified");
+            foreach ($lists["corrupt"][$list_id]->get_rows() as $row) {
+                $cause = "";
+                if (strlen($row[$ecrid_index]) == 0)
+                    $cause .= "Ecrid-Angabe fehlt, ";
+                if (strlen($row[$lastModification_index]) == 0)
+                    $cause .= "Angabe zur Art der letzten Änderung (LastModification) fehlt, ";
+                if (strlen($row[$ecrid_index]) == 0)
+                    $cause .= "Angabe zum Zeitpunkt der letzten Änderung (LastModified) fehlt, ";
+                // get full record
+                $full_record = $this->socket->find_record($table_name, "ecrid", $row[$ecrid_index]);
+                $is_empty = ($this->is_content_empty($table_name, $full_record));
+                $record_str = "";
+                foreach ($full_record as $key => $value)
+                    if (! is_null($value) && (strlen($value) > 0) && (strcasecmp($key, "ecrhis") != 0))
+                        $record_str .= $key . "=" . $value . "; ";
+                $corrupt_records_list .= "<li>Fehler: " . $cause . " in Datensatz " .
+                         (($is_empty) ? " <b><i>inhaltlich leer</b></i> " : "") . $record_str . "</li>\n";
+                if ($is_empty) {
+                    if ($delete_corrupt && $user_is_admin) {
+                        $update_result = $this->update_record($audit_user_id, $table_name, 
+                                ["ecrid" => $row[$ecrid_index]
+                                ], "delete");
+                        if (strlen($update_result) == 0)
+                            $corrupt_records_list .= "<li><b>leerer, korrupter Datensatz gelöscht.</b></li>\n";
+                        else
+                            $audit_result .= "<li>Fehler bei der Aktualisierung eines Datensatzes: " .
+                                     $update_result . " </li>\n";
+                    } else
+                        $corrupt_records_list .= "<li>wird bei Bereinigung automatisch gelöscht.</li>\n";
+                }
+                // collect key of referencing record
+                $corrupt_records_cnt ++;
+            }
+            if ($corrupt_records_cnt > 0) {
+                $corrupt_records_list_all .= "<li>auditiere $table_name:</li><ul>\n" . $corrupt_records_list .
+                         "</ul>";
+                $corrupt_records_cnt_all += $corrupt_records_cnt;
+            } else {
+                $corrupt_records_list_all .= "<li>auditiere $table_name: ok.</li>";
+            }
+        }
+        if ($corrupt_records_cnt_all > 0)
+            $audit_result .= $corrupt_records_list_all . "</ul>";
+        else
+            $audit_result .= "<li>Keine.</li></ul>";
+        
         // continue with duplicate warnings and unique assertions
         // ======================================================
-        $audit_result .= "<li><b>Dublettencheck:</b></li>\n<ul>";
-        for ($list_id = 1; $list_id <= 13; $list_id ++) {
+        $audit_result .= "<li><b>Dublettencheck:</b><br>Die automatische Korrektur besteht darin, " .
+                 "dass bei allen Namen, die länger als zwei Zeichen sind, die jeweils ältesten " .
+                 "Datensätze an den Namen einen oder mehrere Punkte angehängt bekommen.</li>\n<ul>";
+        $list_definitions = new Tfyh_list("../config/lists/efaAuditDuplicates", 0, "", $this->socket, 
+                $this->toolbox);
+        $list_definitions = $list_definitions->get_all_list_definitions();
+        for ($list_index = 0; $list_index < count($list_definitions); $list_index ++) {
+            $list_id = intval($list_definitions[$list_index]["id"]);
             $lists["duplicate"][$list_id] = new Tfyh_list("../config/lists/efaAuditDuplicates", $list_id, "", 
                     $this->socket, $this->toolbox);
             $table_name = $lists["duplicate"][$list_id]->get_table_name();
@@ -304,7 +459,7 @@ class Efa_audit
             // prepare arrays
             $warn_duplicates_cols = [];
             $warn_duplicates_vals = [];
-            if (is_array(self::$warn_duplicates[$table_name]) &&
+            if (isset(self::$warn_duplicates[$table_name]) && is_array(self::$warn_duplicates[$table_name]) &&
                      (count(self::$warn_duplicates[$table_name]) > 0)) {
                 foreach (self::$warn_duplicates[$table_name] as $field_names) {
                     $warn_duplicates_cols[$field_names] = [];
@@ -359,6 +514,7 @@ class Efa_audit
             
             // issue warnings for duplicates
             if (count($warn_duplicates_cols) > 0) {
+                $invalid_now = time();
                 foreach ($warn_duplicates_vals as $fieldnames => $value_list) {
                     foreach ($value_list as $value => $occurrences) {
                         if (count($occurrences) > 1) {
@@ -374,9 +530,12 @@ class Efa_audit
                                 }
                                 if (count($ids) > 1) {
                                     $audit_result .= "<li>'$fieldnames' mit Wert '$value' hat mehr als eine zugehörige Id:";
+                                    $youngest = 0;
                                     foreach ($ids as $id => $cnt) {
                                         $audit_result .= "<br>" . $id;
                                         $invalid32 = $uuid_invalids32[$id];
+                                        if ($invalid32 > $youngest)
+                                            $youngest = $invalid32;
                                         if (isset($uuid_names[$id]))
                                             $audit_result .= " = " . htmlspecialchars($uuid_names[$id]);
                                         if ($invalid32 > 0)
@@ -387,6 +546,47 @@ class Efa_audit
                                         $audit_result .= "; ";
                                     }
                                     $audit_result .= "</li>\n";
+                                    if (strlen($value) > 2) {
+                                        $mark = ".";
+                                        $field_to_change = (strcasecmp($table_name, "efa2persons") == 0) ? "LastName" : "Name";
+                                        foreach ($ids as $id => $cnt) {
+                                            $invalid32 = $uuid_invalids32[$id];
+                                            if ($invalid32 != $youngest) {
+                                                // Add a "." to the name to differetiate it from the other
+                                                $records_to_change = $this->socket->find_records_matched(
+                                                        $table_name, 
+                                                        ["Id" => $id
+                                                        ], 10);
+                                                if (is_array($records_to_change)) {
+                                                    if ($mark_duplicates && $user_is_admin) {
+                                                        foreach ($records_to_change as $record_to_change) {
+                                                            $record_to_change[$field_to_change] .= $mark;
+                                                            $update_result = $this->update_record(
+                                                                    $audit_user_id, $table_name, 
+                                                                    $record_to_change);
+                                                            if (strlen($update_result) == 0)
+                                                                $audit_result .= "<li><b>Neuer Wert '" .
+                                                                         $record_to_change[$field_to_change] .
+                                                                         " in '" . $field_to_change . "' für '" .
+                                                                         $id . "' zur Unterscheidung</b></li>";
+                                                            else
+                                                                $audit_result .= "<li>Fehler bei der Aktualisierung eines Datensatzes: " .
+                                                                         $update_result . " </li>\n";
+                                                        }
+                                                    } else {
+                                                        foreach ($records_to_change as $record_to_change) {
+                                                            $record_to_change[$field_to_change] .= $mark;
+                                                            $audit_result .= "<li>Nach Bereinigung ist der neuer Wert '" .
+                                                                     $record_to_change[$field_to_change] .
+                                                                     " in '" . $field_to_change . "' für '" .
+                                                                     $id . "' zur Unterscheidung</li>";
+                                                        }
+                                                    }
+                                                    $mark .= ".";
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             } else {
                                 // There is no list with duplicate warning and no UUID
@@ -431,23 +631,59 @@ class Efa_audit
         // continue with non-empty checks
         // ==============================
         $audit_result .= "<li><b>Fehlende Angaben:</b></li>\n<ul>";
-        for ($list_id = 1; $list_id <= 11; $list_id ++) {
+        $list_definitions = new Tfyh_list("../config/lists/efaAuditNotEmpty", 0, "", $this->socket, 
+                $this->toolbox);
+        $list_definitions = $list_definitions->get_all_list_definitions();
+        for ($list_index = 0; $list_index < count($list_definitions); $list_index ++) {
+            $list_id = intval($list_definitions[$list_index]["id"]);
             $lists["nonempty"][$list_id] = new Tfyh_list("../config/lists/efaAuditNotEmpty", $list_id, "", 
                     $this->socket, $this->toolbox);
             $table_name = $lists["nonempty"][$list_id]->get_table_name();
             $audit_result .= "<li>auditiere $table_name:</li>\n<ul>";
             $asserts = self::$assert_not_empty[$table_name];
+            $defaults = isset(self::$defaults_not_empty[$table_name]) ? self::$defaults_not_empty[$table_name] : false;
             foreach ($lists["nonempty"][$list_id]->get_rows() as $row) {
                 $named_row = $lists["nonempty"][$list_id]->get_named_row($row);
                 $missing = "";
+                $defaulting = "";
+                $default_values = "";
                 $recordstr = "";
+                $record_update = ["ecrid" => $named_row["ecrid"]
+                ];
                 foreach ($named_row as $key => $value) {
-                    if (in_array($key, $asserts) && (strlen($value) == 0))
-                        $missing .= $key . ", ";
+                    if (in_array($key, $asserts) && (strlen($value) == 0)) {
+                        if (is_array($defaults) && array_key_exists($key, $defaults)) {
+                            $defaulting .= $key . ", ";
+                            $default_values .= $defaults[$key] . ", ";
+                            $record_update[$key] = $defaults[$key];
+                        } else
+                            $missing .= $key . ", ";
+                    }
                     $recordstr .= "$key = $value; ";
                 }
+                if (strlen($missing) > 0)
+                    $missing = substr($missing, 0, strlen($missing) - 2);
+                if (strlen($defaulting) > 0)
+                    $defaulting = substr($defaulting, 0, strlen($defaulting) - 2);
+                if (strlen($default_values) > 0)
+                    $default_values = substr($default_values, 0, strlen($default_values) - 2);
+                if (strlen($defaulting) > 0) {
+                    if ($set_missing_defaults && $user_is_admin) {
+                        $update_result = $this->update_record($audit_user_id, $table_name, $record_update);
+                        if (strlen($update_result) == 0)
+                            $audit_result .= "<li><b>die notwendigen Angaben '" . $defaulting .
+                                     "' wurden auf den Standard '" . $default_values . "' gesetzt.</b></li>\n";
+                        else
+                            $audit_result .= "<li>Fehler bei der Aktualisierung eines Datensatzes: " .
+                                     $update_result . " </li>\n";
+                    } else
+                        $audit_result .= "<li>die notwendigen Angaben '" . $defaulting .
+                                 "' fehlen im Datensatz: " . $recordstr .
+                                 " und werden bei einer Bereinigung auf den Standard '" . $default_values .
+                                 "' gesetzt. </li>\n";
+                }
                 if (strlen($missing) > 0) {
-                    $audit_result .= "<li>die notwendigen Angaben " . $missing . " fehlen in Datensatz: " .
+                    $audit_result .= "<li>die notwendigen Angaben '" . $missing . "' fehlen im Datensatz: " .
                              $recordstr . "</li>\n";
                 }
             }
@@ -504,7 +740,8 @@ class Efa_audit
      */
     private function build_indices (int $list_id, bool $force_refresh)
     {
-        if (! $force_refresh && (count($this->ids_for_names[$list_id]) > 0))
+        if (! $force_refresh &&
+                 (isset($this->ids_for_names[$list_id]) && (count($this->ids_for_names[$list_id]) > 0)))
             return;
         $this->clear_indices($list_id);
         $uuid_names = new Tfyh_list("../config/lists/efaAuditUUIDnames", $list_id, "", $this->socket, 
@@ -760,7 +997,8 @@ class Efa_audit
                 elseif (strcasecmp($sysfield, "Id") == 0)
                     $record_to_modify[$sysfield] = $this->toolbox->create_GUIDv4();
                 // numeric autoincrement key fields
-                elseif (($mode == 1) && (strcasecmp($sysfield, $this->efa_tables->fixid_auto_field) == 0)) {
+                elseif (($mode == 1) &&
+                         (strcasecmp($sysfield, $this->efa_tables->fixid_auto_field[$tablename]) == 0)) {
                     $logbookname = (isset($record_to_modify["Logbooknme"])) ? $record_to_modify["Logbooknme"] : "";
                     $record_to_modify[$sysfield] = $this->efa_tables->autoincrement_key_field($tablename, 
                             $logbookname);
@@ -799,6 +1037,7 @@ class Efa_audit
         $this->build_indices($list_id, $force_refresh);
         $tablename = $this->table_names[$list_id];
         $use_uuid = ((isset($version_record["Id"])) && (strlen($version_record["Id"]) > 0));
+        
         if ($use_uuid) {
             $existing_uuid = (isset($this->invalidFroms_per_ids[$list_id][$version_record["Id"]])) ? $version_record["Id"] : null;
         } else {
@@ -810,26 +1049,29 @@ class Efa_audit
             $version_record["ecrid"] = $this->ecrids_per_ids[$list_id][$existing_uuid];
             // for updates add also the Id to avoid that it removed.
             $version_record["Id"] = $existing_uuid;
+        } elseif ($use_uuid) {
+            // if a UUID is provided, it must be used.
+            return "Ein Objekt mit der Id '" . $version_record["Id"] . "' gibt es in $tablename nicht.";
         }
         
         // Check whether the record existance fits to the intended operation
         // =================================================================
-        $error_rpefix = ($use_uuid) ? "Ein Objekt mit der Id '" . $version_record["Id"] .
+        $error_prefix = ($use_uuid) ? "Ein Objekt mit der Id '" . $version_record["Id"] .
                  "' gibt es in $tablename" : "Ein Objekt mit dem Namen " . $name . " gibt es in $tablename";
         if ($mode == 1) {
             if (! is_null($existing_uuid))
-                return $error_rpefix .
+                return $error_prefix .
                          " bereits ($existing_uuid = $name). Es kann nicht erneut angelegt werden.";
         } elseif ($mode == 2) {
             if (is_null($existing_uuid) || (strlen($existing_uuid) < 5))
-                return $error_rpefix . " noch nicht. Es kann nicht aktualisiert werden.";
+                return $error_prefix . " noch nicht. Es kann nicht aktualisiert werden.";
             $invalidFrom = $this->invalidFroms_per_ids[$list_id][$existing_uuid];
             if (time() > $invalidFrom)
-                return $error_rpefix .
+                return $error_prefix .
                          ", es hat aber keinen aktuell güligen Datensatz mehr. Es kann nicht aktualisiert werden.";
         } elseif ($mode == 3) {
             if (is_null($existing_uuid))
-                return $error_rpefix . " noch nicht. Es kann nicht abgegrenzt werden.";
+                return $error_prefix . " noch nicht. Es kann nicht abgegrenzt werden.";
         }
         return $version_record;
     }
@@ -856,7 +1098,6 @@ class Efa_audit
     public function modify_version (int $list_id, array $version_record, int $mode, bool $force_refresh, 
             bool $execute)
     {
-        
         // Check whether the object in question exists. Use the UUID, if given, or resolve the name else
         // =============================================================================================
         $version_record = $this->select_existing_record($list_id, $version_record, $mode, $force_refresh);

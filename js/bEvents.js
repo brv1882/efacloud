@@ -102,7 +102,7 @@ function _showList(type, count) {
 	try {
 		bPanel.showList(type, count);
     } catch (e) {
-		showException(e);
+		bModal.showException(e);
 	}
 }
 
@@ -124,7 +124,7 @@ function doAction(actionId) {
 		try {
 			window["_" + action[0]](action[1], action[2]);
 		} catch (e) {
-			showException(e);
+			bModal.showException(e);
 		}
 		bindMenuEvents();
 	}
@@ -187,7 +187,7 @@ var uiRefreshTimer = setInterval(function() {
 			$_last_synch = nowSeconds;
 		}
     } catch (e) {
-		showException(e);
+    	bModal.showException(e);
 	}
 }, $_uiRefreshMillis);
 

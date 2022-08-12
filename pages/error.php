@@ -14,7 +14,7 @@ $text = $error_description[2];
 // set default text, which will show up, if "error.php" is called without providing an error
 // description.
 file_put_contents($lasterrorfile, 
-        "no_source;Unbestimmter Fehler;Die Sitzung wurde aufgrund eines unbestimmten Fehlers beendet.");
+        "no_source;Unbestimmter Fehler;Der verursachende Fehler konnte nicht mehr ermittelt werden.");
 
 $file_path_elements = explode("/", $source_file);
 $index_last = count($file_path_elements) - 1;
@@ -22,8 +22,6 @@ $login_goto = $file_path_elements[$index_last - 1] . "/" . $file_path_elements[$
 
 include_once '../classes/tfyh_toolbox.php';
 $toolbox = new Tfyh_toolbox();
-$session_user_valid = (isset($_SESSION) && isset($_SESSION["User"]) &&
-         (strcasecmp($_SESSION["User"]["Rolle"], $toolbox->users->anonymous_role) != 0));
 
 // the error may have been caused by an init check. Then the source of the error is this error.php
 // file itself. Do not redo those init checks then to avoid endless loops.
@@ -91,7 +89,7 @@ if ($blocking_overload) {
     $session_data .= json_encode($_SESSION);
     $session_data .= "\n-------------------- \$_SESSION ------------------";
     file_put_contents("../log/overload/" . strval(time()), $timestamps . $session_data);
-    $toolbox->app_sessions->session_close();
+    $toolbox->app_sessions->session_close("Overload detected", "");
     sleep(1);
     
     // Return a very short String, no formatting.
@@ -101,8 +99,15 @@ if ($blocking_overload) {
     if (isset($socket))
         $socket->close();
     exit();
-} elseif (! $suppress_counting && $session_user_valid) {
-    // no overload detected.
+} 
+
+// no overload detected. The session may be resumed or started.
+if (session_status() == PHP_SESSION_NONE) 
+    session_start();
+$session_user_valid = (isset($_SESSION) && isset($_SESSION["User"]) &&
+        (strcasecmp($_SESSION["User"]["Rolle"], $toolbox->users->anonymous_role) != 0));
+
+if (! $suppress_counting && $session_user_valid) {
     // Count the error, if such error shall be counted.
     $toolbox->load_throttle("errors/", $toolbox->config->settings_tfyh["init"]["max_errors_per_hour"]);
     $toolbox->logger->log_init_login_error("error");
@@ -127,6 +132,8 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 <?php
 echo "<h3><br><br>" . $headline . "</h3>";
 echo "<p>" . $text . "</p>";
+if ($session_user_valid)
+echo "<p><br>Die Sitzung ist noch aktiv, weiter geht es mit einer beliebigen Aktion aus dem Menü.</p>";
 
 if ($blocking_overload) {
     require_once '../classes/tfyh_mail_handler.php';

@@ -25,12 +25,38 @@ class Cron_jobs extends Tfyh_cron_jobs
         $daily_run = Tfyh_cron_jobs::run_daily_jobs($toolbox, $socket, $app_user_id);
         
         // add application specific cron jobs here.
+        // The sequence is an implicit priority, in case one of the jobs fails.
         if ($daily_run) {
             
             $cronlog = "../log/sys_cronjobs.log";
             file_put_contents($cronlog, date("Y-m-d H:i:s") . " +0: specific efaCloud cronjobs started.\n", 
                     FILE_APPEND);
             $last_step_ended = time();
+            
+            // Run the configured cron jobs as personal logbook or monitoring report.
+            self::run_configured_jobs($toolbox, $socket, $app_user_id);
+            file_put_contents($cronlog, 
+                    date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) . ": Configured jobs completed.\n", 
+                    FILE_APPEND);
+            file_put_contents($cronlog, 
+                    date("Y-m-d H:i:s") . ": Cron jobs done. Total cron jobs duration = " .
+                             (time() - $cron_started) . ".\n", FILE_APPEND);
+            
+            // add missing ecrids (just all. There must not be many left in April 2022.)
+            include_once "../classes/efa_tables.php";
+            $efa_tables = new Efa_tables($toolbox, $socket);
+            include_once '../classes/efa_tools.php';
+            $efa_tools = new Efa_tools($efa_tables, $toolbox);
+            $added_ecrids = $efa_tools->add_ecrids(10000);
+            file_put_contents($cronlog, 
+                    date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) . ": Added " . $added_ecrids .
+                             " missing efaCloud record Ids.\n", FILE_APPEND);
+            $last_step_ended = time();
+            
+            // Add missing values in helper data fields which are build of multiple direct fields.
+            $efa_tools->add_AllCrewIds($app_user_id);
+            $efa_tools->add_FirstLastName($app_user_id);
+            
             // create usage statistics
             include_once "../classes/tfyh_statistics.php";
             $tfyh_statistics = new Tfyh_statistics();
@@ -42,57 +68,36 @@ class Cron_jobs extends Tfyh_cron_jobs
             $last_step_ended = time();
             
             // run archive and delete procedures
-            include_once "../classes/efa_tables.php";
-            $efa_tables = new Efa_tables($toolbox, $socket);
             include_once "../classes/efa_archive.php";
             $efa_archive = new Efa_archive($efa_tables, $toolbox, $app_user_id);
             $archive_info = $efa_archive->records_to_archive();
-            file_put_contents($cronlog,
-                    date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) . ": Archived: " . $archive_info . ".\n",
-                    FILE_APPEND);
+            file_put_contents($cronlog, 
+                    date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) . ": Archived: " . $archive_info .
+                             ".\n", FILE_APPEND);
             $last_step_ended = time();
             $purge_info = $efa_archive->purge_outdated_deleted();
-            file_put_contents($cronlog,
-                    date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) . ": Purged: " . $purge_info . ".\n",
-                    FILE_APPEND);
-            $last_step_ended = time();
-            
-            // add missing ecrids (just all. There must not be many left in April 2022.)
-            include_once '../classes/efa_tools.php';
-            $efa_tools = new Efa_tools($efa_tables, $toolbox);
-            $added_ecrids = $efa_tools->add_ecrids(10000);
-            file_put_contents($cronlog,
-                    date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) . ": Added " . $added_ecrids . " missing efaCloud record Ids.\n",
-                    FILE_APPEND);
+            file_put_contents($cronlog, 
+                    date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) . ": Purged: " . $purge_info .
+                             ".\n", FILE_APPEND);
             $last_step_ended = time();
             
             // manage deleted records (TODO: this may be temporary, introduced April 2022).
             $efa_tools->cleanse_deleted($app_user_id);
             $efa_tools->remove_old_cleansed_records(30);
-            $efa_tools->add_AllCrewIds($app_user_id);
-            file_put_contents($cronlog,
-                    date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) . ": Cleansing completed.\n",
+            file_put_contents($cronlog, 
+                    date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) . ": Cleansing completed.\n", 
                     FILE_APPEND);
             $last_step_ended = time();
-            
+
             // audit tables
             include_once "../classes/efa_audit.php";
             $efa_audit = new Efa_audit($efa_tables, $toolbox);
-            $audit_report = $efa_audit->data_integrity_audit();
+            $audit_report = $efa_audit->data_integrity_audit(false, false, false);
             file_put_contents("../log/app_db_audit.html", $audit_report);
             file_put_contents($cronlog, 
-                    date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) . ": Database integrity audit completed.\n", 
-                    FILE_APPEND);
-            $last_step_ended = time();
-            
-            // Run the configured cron jobs as personal logbook or monitoring report.
-            self::run_configured_jobs($toolbox, $socket, $app_user_id);
-            file_put_contents($cronlog, 
                     date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) .
-                             ": Configured jobs completed.\n", FILE_APPEND);
-            file_put_contents($cronlog, 
-                    date("Y-m-d H:i:s") . ": Cron jobs done. Total cron jobs duration = " .
-                             (time() - $cron_started) . ".\n", FILE_APPEND);
+                             ": Database integrity audit completed.\n", FILE_APPEND);
+            $last_step_ended = time();
         }
     }
 
@@ -151,8 +156,8 @@ class Cron_jobs extends Tfyh_cron_jobs
         // run the jobs
         foreach ($configured_jobs as $configured_job) {
             $configured_job_parts = explode(" ", trim($configured_job));
-            file_put_contents($cronlog, date("Y-m-d H:i:s") . " +0: checking " . trim($configured_job) . ".\n",
-                    FILE_APPEND);
+            file_put_contents($cronlog, 
+                    date("Y-m-d H:i:s") . " +0: checking " . trim($configured_job) . ".\n", FILE_APPEND);
             $due_today = Cron_jobs::due_today($configured_job_parts[0]);
             $type = $configured_job_parts[1];
             if ($due_today) {

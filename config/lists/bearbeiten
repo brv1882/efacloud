@@ -1,7 +1,7 @@
 id;permission;name;select;from;where;options
 1;member;Offene Schadensmeldungen;BoatId>efa2boats.Name@Id,Damage,Severity,Description,Fixed,ReportDate,ReportTime,FixDate,FixTime, \
   ReportedByPersonId,ReportedByPersonName,FixedByPersonId,FixedByPersonName,LogbookText,ChangeCount,BoatId,LastModification;efa2boatdamages; \
-  (ISNULL(Fixed) AND NOT (`efa2boatdamages`.`LastModification` = 'delete')); \
+  (ISNULL(`Fixed`) AND NOT (`efa2boatdamages`.`LastModification` = 'delete')); \
   sort=#Damage&link=Damage:../pages/view_record.php?def=bearbeiten.1.Damage.
 2;member;Ungelesene Nachrichten;MessageId,Date,Time,To,From,Subject,Text,Read,ToBeMailed,ChangeCount,LastModification;efa2messages; \
   (ISNULL(`Read`) AND NOT (`efa2messages`.`LastModification` = 'delete')); \

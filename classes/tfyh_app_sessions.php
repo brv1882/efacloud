@@ -3,7 +3,10 @@
 /**
  * Class to handle sessions from an application perspective, in particular managing concurrency and load
  * throttling from application perspective. The session file has three integer numbers: started at (Unix
- * timestamp, seconds); refreshed at (delta seconds after started at, seconds); user ID.
+ * timestamp, seconds); refreshed at (delta seconds after started at, seconds); user ID. Its name is the
+ * session ID which is either the PHP session id or the app-session ID. app sessions are used for non-browser
+ * access, usually by a program API. Both PHP and app sessions are monitored to limit the maximum number of
+ * concurrent sessions.
  */
 class Tfyh_app_sessions
 {
@@ -55,7 +58,7 @@ class Tfyh_app_sessions
         if (! file_exists($session_file)) {
             if ($this->debug_on)
                 file_put_contents($this->debug_file, 
-                        date("Y-m-d H:i:s") . "\n  No such session file: " . $session_file . "\n", FILE_APPEND);
+                        date("Y-m-d H:i:s") . ": No such session file: " . $session_file . "\n", FILE_APPEND);
             return false;
         }
         $times_and_user = file_get_contents($session_file);
@@ -98,26 +101,19 @@ class Tfyh_app_sessions
                     unlink($this->sessions_dir . $session_file);
                 else {
                     $now = time();
+                    if ($this->debug_on)
+                        file_put_contents($this->debug_file, 
+                                date("Y-m-d H:i:s") . ": Session checked: " . $session_file . ", started: " .
+                                         date("Y-m-d H:i:s", $session["started_at"]) . ", refreshed: " .
+                                         date("Y-m-d H:i:s", $session["refreshed_at"]) . "\n", FILE_APPEND);
                     if ($session["refreshed_at"] < $now - $this->max_session_duration) {
-                        $this->session_close($session_file);
-                        $remove_success = unlink($this->sessions_dir . $session_file);
-                        if (! $remove_success)
-                            $this->toolbox->logger->log(2, 0, 
-                                    "Unable to remove inactive session: " . $session_file);
-                        elseif ($this->debug_on)
-                            file_put_contents($this->debug_file, 
-                                    date("Y-m-d H:i:s") . "\n  Removed inactive session: " . $session_file .
-                                             "\n", FILE_APPEND);
+                        $this->session_close(
+                                "exceeded maximum session duration of " . ($this->max_session_duration / 3600) .
+                                         " hours.", $session_file);
                     } elseif ($session["started_at"] < $now - $this->max_session_keepalive) {
-                        $remove_success = unlink($this->sessions_dir . $session_file);
-                        $this->session_close($session_file);
-                        if (! $remove_success)
-                            $this->toolbox->logger->log(2, 0, 
-                                    "Unable to remove overduring session: " . $session_file);
-                        elseif ($this->debug_on)
-                            file_put_contents($this->debug_file, 
-                                    date("Y-m-d H:i:s") . "\n  Removed overduring session: " . $session_file .
-                                             "\n", FILE_APPEND);
+                        $this->session_close(
+                                "exceeded maximum inactive time of " . ($this->max_session_keepalive / 60) .
+                                         " minutes.", $session_file);
                     } else
                         $open_sessions_count ++;
                 }
@@ -189,20 +185,20 @@ class Tfyh_app_sessions
                 if (file_put_contents($session_file, $started_session) !== false) {
                     if ($this->debug_on)
                         file_put_contents($this->debug_file, 
-                                date("Y-m-d H:i:s") . "\n  Started new session: " . $human_readable . "\n", 
+                                date("Y-m-d H:i:s") . ": Started new session: " . $human_readable . "\n", 
                                 FILE_APPEND);
                     return true;
                 } else {
                     if ($this->debug_on)
                         file_put_contents($this->debug_file, 
-                                date("Y-m-d H:i:s") . "\n  Failed to write new session file: " .
-                                         $human_readable . "\n", FILE_APPEND);
+                                date("Y-m-d H:i:s") . ": Failed to write new session file: " . $human_readable .
+                                         "\n", FILE_APPEND);
                     return false;
                 }
             } else {
                 if ($this->debug_on)
                     file_put_contents($this->debug_file, 
-                            date("Y-m-d H:i:s") . "\n  Refused to start new session for: " . $user_id .
+                            date("Y-m-d H:i:s") . ": Refused to start new session for: " . $user_id .
                                      " because of currently " . $open_sessions_count . "open sessions.\n", 
                                     FILE_APPEND);
                 return false;
@@ -210,23 +206,22 @@ class Tfyh_app_sessions
         } else {
             $started = $existing_session["started_at"];
             $refreshed = time();
-            $human_readable = "started " . date("Y-m-d H:i:s", $started) . ", refreshed " .
+            $human_readable = $session_id . ", started " . date("Y-m-d H:i:s", $started) . ", refreshed " .
                      date("Y-m-d H:i:s", $refreshed) . ", for user " . $user_id;
             $refreshed_session = $started . ";" . $refreshed . ";" . $user_id . ";" . $human_readable;
-            if ($this->debug_on)
-                file_put_contents($this->debug_file, 
-                        date("Y-m-d H:i:s") . "\n  Refreshed session: " . $human_readable . "\n", FILE_APPEND);
             // refresh existing session.
             if (file_put_contents($session_file, $refreshed_session) !== false) {
                 if ($this->debug_on)
                     file_put_contents($this->debug_file, 
-                            date("Y-m-d H:i:s") . "\n  Refreshed session: " . $human_readable . "\n", 
+                            date("Y-m-d H:i:s") . ": Refreshed session: " . $human_readable . "\n", 
                             FILE_APPEND);
                 return true;
             } else {
+                $this->toolbox->logger->log(2, 0, 
+                        "Failed to write refreshed session file: " . $human_readable);
                 if ($this->debug_on)
                     file_put_contents($this->debug_file, 
-                            date("Y-m-d H:i:s") . "\n  Failed to write refreshed session file: " .
+                            date("Y-m-d H:i:s") . ": Failed to write refreshed session file: " .
                                      $human_readable . "\n", FILE_APPEND);
                 return false;
             }
@@ -234,31 +229,43 @@ class Tfyh_app_sessions
     }
 
     /**
-     * Close a session. This will unlink the session file and cleanse the sessions directory. Set the
-     * session_id to "" or omit it to use the PHP session context for closing.
+     * Close a session. This will close the PHP session, if existing. If an $app_session_id is prvided this
+     * will also close the app session, i. e. unlink the session file and cleanse the sessions directory.
      * 
-     * @param String $session_id
-     *            the session ID = filename
+     * @param String $cause
+     *            the cause why the session was closed. Used for logging.
+     * @param String $app_session_id
+     *            the app session ID = filename, default is "", i. e. no app session to be closed.
      */
-    public function session_close (String $session_id = "")
+    public function session_close (String $cause, String $app_session_id = "")
     {
-        // get the PHP context, if requested.
-        if (strlen($session_id) == 0) {
+        $because_of = (strlen($cause) > 0) ? ": " . $cause : "";
+        // close the PHP session, if existing.
+        if (strlen(session_id()) > 0) {
             $session_id = session_id();
             session_destroy();
             $_SESSION = array();
+            file_put_contents($this->debug_file, 
+                    date("Y-m-d H:i:s") . ": Closed PHP session '$session_id' $because_of \n", FILE_APPEND);
         }
-        $unlink_success = unlink($this->sessions_dir . $session_id);
-        if ($this->debug_on) {
-            if ($unlink_success)
-                file_put_contents($this->debug_file, 
-                        date("Y-m-d H:i:s") . "\n  Closed session: " . $session_id . "\n", FILE_APPEND);
-            else
-                file_put_contents($this->debug_file, 
-                        date("Y-m-d H:i:s") . "\n  Failed to remove session file: " . $session_id . "\n", 
-                        FILE_APPEND);
+        // close the app session, if an $app_session_id is provided.
+        if (strlen($app_session_id) > 0) {
+            $unlink_success = unlink($this->sessions_dir . $app_session_id);
+            if (! $unlink_success)
+                $this->toolbox->logger->log(2, 0, 
+                        "Unable to remove inactive app session '$app_session_id' $because_of");
+            if ($this->debug_on) {
+                if ($unlink_success)
+                    file_put_contents($this->debug_file, 
+                            date("Y-m-d H:i:s") . ": Closed app session '$app_session_id' $because_of \n", 
+                            FILE_APPEND);
+                else
+                    file_put_contents($this->debug_file, 
+                            date("Y-m-d H:i:s") .
+                                     ": Failed to remove session file '$app_session_id' $because_of \n", 
+                                    FILE_APPEND);
+            }
         }
-        $this->cleanse_and_count_sessions();
     }
 }
     

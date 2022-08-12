@@ -1,8 +1,8 @@
 var bTrip = {
 
-	buttonEndTrip : '<div class="w3-row"><div class="w3-col l1">' + 
-						'<p class="formbutton" id="do-getForm_endTrip_[EntryId]">Fahrt Beenden</p>' + 
-					'</div></div>',
+	buttonEndTrip : '<div class="w3-row"><div class="w3-col l1">'
+			+ '<p class="formbutton" id="do-getForm_endTrip_[EntryId]">Fahrt Beenden</p>'
+			+ '</div></div>',
 
 	/**
 	 * Set all trip Values to default
@@ -108,9 +108,10 @@ var bTrip = {
 			destination += ", " + trip["destinationVariantName"];
 		var html = "<tr><td>" + trip["EntryId"] + "</td><td>" + startAndEnd
 				+ "</td><td>" + this.getBoatName(trip) + "</td>";
-		if (full) 
+		if (full)
 			html += "<td>" + coxname + "</td><td>" + crew + "</td>";
-		html += "<td>" + destination + "</td><td>" + trip["Distance"] + "</td></tr>";
+		html += "<td>" + destination + "</td><td>" + trip["Distance"]
+				+ "</td></tr>";
 		return html;
 	},
 
@@ -170,14 +171,19 @@ var bTrip = {
 				record["Crew" + i + "Id"] = trip["Crew" + i + "Name"];
 			}
 		}
-		// Resolve the destination name, if a destinationId is provided. Else
-		// take the name itself.
+		// Resolve the destination name, if a destinationId is provided.
 		if (trip["DestinationId"]) {
 			var destination = bLists.lists.efaWeb_destinations[bLists.indices.efaWeb_destinations_guids[trip["DestinationId"]]];
 			record["DestinationId"] = (destination) ? destination["Name"]
-					: "[nicht gefunden]";
-		} else if (trip["DestinationName"]) {
+					: false;
+		}
+		// If the destination Id is not provided or could not be resolved,
+		// because it is a name take the name itself.
+		if (!record["DestinationId"] && trip["DestinationName"])
 			record["DestinationId"] = trip["DestinationName"];
+		if (trip["Distance"]) {
+			var distance = trip["Distance"].replace("km","").replace(/ /g,"") + " km";
+			record["Distance"] = distance;
 		}
 		// Resolve the waters list names, if a watersIdList is provided. Else
 		// take the names themselves.
@@ -244,7 +250,8 @@ var bTrip = {
 		if (!trip.DestinationId || trip.DestinationId < 30)
 			return trip.DestinationName + v;
 		var r = bLists.indices.efaWeb_destinations_guids[trip.DestinationId];
-		return (r) ? bLists.lists.efaWeb_destinations[r].Name + v : trip.DestinationId;
+		return (r) ? bLists.lists.efaWeb_destinations[r].Name + v
+				: trip.DestinationId;
 	},
 
 	/**
@@ -252,29 +259,30 @@ var bTrip = {
 	 */
 	getDatasheet : function(trip) {
 		// get the current data. Will refresh the modal after loading
-		bTxQueue.addNewTxToPending("select", "efa2logbook", ["ecrid;" + trip["ecrid"]], 0, bTrip.updateModal);
+		bTxQueue.addNewTxToPending("select", "efa2logbook", [ "ecrid;"
+				+ trip["ecrid"] ], 0, bTrip.updateModal);
 		var s = "<table id='modal-table'><tbody><tr><th>Fahrt</th><th>Start</th><th>Boot</th>"
-			+ "<th>Steuermann</th><th>Mannschaft</th><th>Ziel</th><th>km</th></tr>";
+				+ "<th>Steuermann</th><th>Mannschaft</th><th>Ziel</th><th>km</th></tr>";
 		s += bTrip.formatTrip(trip, true);
 		s += "</tbody></table>";
 		var endButton = bTrip.buttonEndTrip.replace("[EntryId]", ""
 				+ trip.EntryId);
 		return s + endButton;
 	},
-	
+
 	/**
 	 * The information in the modal has to be refreshed.
 	 */
 	updateModal : function(trips) {
 		var s = "<table id='modal-table'><tbody><tr><th>Fahrt</th><th>Start</th><th>Boot</th>"
-			+ "<th>Steuermann</th><th>Mannschaft</th><th>Ziel</th><th>km</th></tr>";
+				+ "<th>Steuermann</th><th>Mannschaft</th><th>Ziel</th><th>km</th></tr>";
 		s += bTrip.formatTrip(trips[0], true);
 		s += "</tbody></table>";
 		var endButton = bTrip.buttonEndTrip.replace("[EntryId]", ""
 				+ trips[0].EntryId);
 		bModal.showHtml(s + endButton);
 	},
-	
+
 	/**
 	 * Resolve all data obtained by the trip form. Add all information to the
 	 * record and return it afterwards.
@@ -286,7 +294,8 @@ var bTrip = {
 		if (boatId) {
 			record["BoatId"] = boatId;
 			boat = bLists.lists.efaWeb_boats[bLists.indices.efaWeb_boats_guids[boatId]];
-			record["BoatVariant"] = bBoat.getVariantIndexForName(boat, bForm.inputs["BoatId"]) + 1;
+			record["BoatVariant"] = bBoat.getVariantIndexForName(boat,
+					bForm.inputs["BoatId"]) + 1;
 		} else
 			record["BoatName"] = bForm.inputs["BoatId"];
 
@@ -353,6 +362,5 @@ var bTrip = {
 			delete record["WatersNameList"];
 		return record;
 	}
-
 
 }

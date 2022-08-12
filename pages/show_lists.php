@@ -24,7 +24,10 @@ else
 if (isset($_GET["listparameter"]))
     $listparameter = ["{listparameter}" => $_GET["listparameter"]
     ];
-else
+elseif (isset($_GET["useconfig"])) {
+    $listparameter = ["{" . $_GET["useconfig"] . "}" => $toolbox->config->get_cfg()[$_GET["useconfig"]]
+    ];
+} else
     $listparameter = [];
 
 include_once "../classes/tfyh_list.php";
@@ -58,8 +61,7 @@ $ofvalue = (isset($_GET["fvalue"])) ? $_GET["fvalue"] : "";
 $data_errors = "";
 if (isset($_GET["zip"])) {
     if ($_GET["zip"] == 1) {
-        $toolbox->logger->log(0, 
-                intval($_SESSION["User"][$toolbox->users->user_id_field_name]), 
+        $toolbox->logger->log(0, intval($_SESSION["User"][$toolbox->users->user_id_field_name]), 
                 $list_name . " als csv zum Download bereitgestellt.");
         $data_errors = $list->get_zip($osorts_list, $ofilter, $ofvalue, $_SESSION["User"]);
     }
@@ -85,7 +87,7 @@ if ($list_id == 0) {
             $permissionstr = (strpos($l["permission"], "@") === 0) ? "Workflows, Maske " . $l["permission"] : $l["permission"];
             $list->parse_options($l["options"]);
             echo "<tr><td>" . $l["id"] . "</td><td>" . $permissionstr . "</td><td><a href='?id=" . $l["id"] .
-                     "&satz=" . $satz . "&pivot=" . $list->pivot . "'>" . $l["name"] . "</a></td></tr>\n";
+                     "&satz=" . $satz . "'>" . $l["name"] . "</a></td></tr>\n";
         }
     }
     echo "</table>\n";

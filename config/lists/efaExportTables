@@ -2,23 +2,23 @@ id;permission;name;select;from;where;options
 1;admin;efa autoincrement;ChangeCount,IntValue,LastModified,LongValue,Sequence;efa2autoincrement;1;sort=Sequence
 2;board;efa boatdamages;BoatId,Damage,Description,Severity,Fixed,ReportDate,ReportTime,FixDate,FixTime, \
   ReportedByPersonId,ReportedByPersonName,FixedByPersonId,FixedByPersonName,RepairCosts,Claim,Notes, \
-  LogbookText,ChangeCount,LastModified,LastModification,ClientSideKey;efa2boatdamages;1;sort=#Damage
+  LogbookText,ChangeCount,LastModified,LastModification,ClientSideKey,ecrid;efa2boatdamages;1;sort=#Damage
 3;board;efa boatreservations;Reservation,Reason,DateFrom,TimeFrom,DateTo,TimeTo,Type,BoatId,ChangeCount,Contact,DateFrom,DateTo,LastModified, \
-  PersonId;efa2boatreservations;1;sort=Reservation
+  PersonId,ecrid;efa2boatreservations;1;sort=Reservation
 4;member;efa boats;Name,ChangeCount,DefaultSessionType,DefaultVariant,Id,InvalidFrom,LastModified, \
   LastVariant,MaxNotInGroup,NameAffix,Owner,TypeCoxing,TypeDescription,TypeRigging,TypeSeats, \
-  TypeType,TypeVariant,ValidFrom;efa2boats;1;sort=Name
+  TypeType,TypeVariant,ValidFrom,ecrid;efa2boats;1;sort=Name
 5;board;efa boatstatus;BaseStatus,BoatId,BoatText,ChangeCount,Comment,CurrentStatus, \
-  LastModified;efa2boatstatus;1;sort=BaseStatus
+  LastModified,ecrid;efa2boatstatus;1;sort=BaseStatus
 6;admin;efa crews;Name,ChangeCount,CoxId,Crew1Id,Crew2Id,Crew3Id,Crew4Id,Crew5Id,Crew6Id,Crew7Id, \
   Crew8Id,Crew9Id,Crew10Id,Crew11Id,Crew12Id,Crew13Id,Crew14Id,Crew15Id,Crew16Id,Crew17Id,Crew18Id, \
-  Crew19Id,Crew20Id,Crew21Id,Crew22Id,Crew23Id,Crew24Id,Id,LastModified;Crews;1;sort=Name
+  Crew19Id,Crew20Id,Crew21Id,Crew22Id,Crew23Id,Crew24Id,Id,LastModified,ecrid;Crews;1;sort=Name
 7;admin;efa destinations;Name,ChangeCount,Distance,End,Id,InvalidFrom,LastModified,Roundtrip, \
-  Start,StartIsBoathouse,ValidFrom,WatersIdList;efa2destinations;1;sort=Id
+  Start,StartIsBoathouse,ValidFrom,WatersIdList,ecrid;efa2destinations;1;sort=Id
 8;admin;efa fahrtenabzeichen;Abzeichen,AbzeichenAB,ChangeCount,Fahrtenheft,Kilometer, \
-  KilometerAB,LastModified,PersonId;efa2fahrtenabzeichen;1;sort=PersonId
+  KilometerAB,LastModified,PersonId,ecrid;efa2fahrtenabzeichen;1;sort=PersonId
 9;board;efa groups;Name,ChangeCount,Color,Id,InvalidFrom,LastModified,MemberIdList, \
-  ValidFrom;efa2groups;1;sort=Id
+  ValidFrom,ecrid;efa2groups;1;sort=Id
 10;board;efa logbook;Logbookname,EntryId,Date,EndDate,BoatId,BoatVariant,BoatName,AllCrewNames,CoxId,CoxName, \
   Crew1Id,Crew1Name,Crew2Id,Crew2Name,Crew3Id,Crew3Name,Crew4Id,Crew4Name,Crew5Id,Crew5Name,Crew6Id, \
   Crew6Name,Crew7Id,Crew7Name,Crew8Id,Crew8Name,Crew9Id,Crew9Name,Crew10Id,Crew10Name,Crew11Id, \
@@ -26,15 +26,15 @@ id;permission;name;select;from;where;options
   Crew16Name,Crew17Id,Crew17Name,Crew18Id,Crew18Name,Crew19Id,Crew19Name,Crew20Id,Crew20Name,Crew21Id, \
   Crew21Name,Crew22Id,Crew22Name,Crew23Id,Crew23Name,Crew24Id,Crew24Name,BoatCaptain,StartTime,EndTime, \
   DestinationId,DestinationName,DestinationVariantName,WatersIdList,WatersNameList,Distance,Comments, \
-  SessionType,SessionGroupId,EfbSyncTime,Open,ChangeCount,LastModified,LastModification,ClientSideKey; \
+  SessionType,SessionGroupId,EfbSyncTime,Open,ChangeCount,LastModified,LastModification,ClientSideKey,ecrid; \
   efa2logbook;1;sort=-Logbookname.-#EntryId
 11;member;efa messages;MessageId,ChangeCount,Date,From,Subject,LastModified,Read,ReplyTo,Text, \
-  Time,To;efa2messages;1;sort=MessageId
+  Time,To,ecrid;efa2messages;1;sort=MessageId
 12;board;efa persons;MembershipNo,FirstName,LastName,ValidFrom,InvalidFrom,Association,Birthday,ChangeCount,Disability, \
   Email,ExcludeFromCompetition,Freeuse1,Freeuse2,Freeuse3,Gender,InputShortcut,LastModified, \
-  Id,NameAffix,StatusId,Title;efa2persons;1;sort=LastName
+  Id,NameAffix,StatusId,Title,ecrid;efa2persons;1;sort=LastName
 13;board;efa sessiongroups;Name,ActiveDays,ChangeCount,EndDate,Id,LastModified,Logbook,Route, \
-  StartDate;efa2sessionGroups;1;sort=Id
+  StartDate,ecrid;efa2sessionGroups;1;sort=Id
 14;board;efa statistics;Id,Name,Position,PubliclyAvailable,DateFrom,DateTo,StatisticCategory, \
   StatisticType,StatisticKey,FilterGender,FilterGenderAll,FilterStatus,FilterStatusAll,FilterSessionType, \
   FilterSessionTypeAll,FilterBoatType,FilterBoatTypeAll,FilterBoatSeats,FilterBoatSeatsAll,FilterBoatRigging, \
@@ -48,12 +48,12 @@ id;permission;name;select;from;where;options
   CompOutputWithoutDetails,CompOutputAllDestinationAreas,SortingCriteria,SortingOrder,OutputType,OutputFile, \
   OutputEncoding,OutputHtmlUpdateTable,OutputCsvSeparator,OutputCsvQuotes,OptionDistanceWithUnit,OptionTruncateDistance, \
   OptionListAllNullEntries,OptionIgnoreNullValues,OptionOnlyMembersWithInsufficientClubwork,OptionSumGuestsAndOthers, \
-  OptionSumGuestsByClub,OptionShowValidLastTrip,ChangeCount,LastModified,LastModification;efa2statistics;1;sort=Id
-15;board;efa status;Id,Name,ChangeCount,LastModified,Membership,Type;efa2status;1;sort=Id
-16;board;efa waters;Name,ChangeCount,Details,Id,LastModified;efa2waters;1;sort=Name
+  OptionSumGuestsByClub,OptionShowValidLastTrip,ChangeCount,LastModified,LastModification,ecrid;efa2statistics;1;sort=Id
+15;board;efa status;Id,Name,ChangeCount,LastModified,Membership,Type,ecrid;efa2status;1;sort=Id
+16;board;efa waters;Name,ChangeCount,Details,Id,LastModified,ecrid;efa2waters;1;sort=Name
 17;board;efa logbook (Mitglieder, aktuelles Jahr);Logbookname,EntryId,Date,EndDate,BoatId,BoatVariant,BoatName,CoxId, \
   Crew1Id,Crew2Id,Crew3Id,Crew4Id,Crew5Id,Crew6Id,Crew7Id,Crew8Id,Crew9Id,Crew10Id,Crew11Id,Crew12Id, \
   Crew13Id,Crew14Id,Crew15Id,Crew16Id,Crew17Id,Crew18Id,Crew19Id,Crew20Id,Crew21Id,Crew22Id,Crew23Id,Crew24Id, \
   BoatCaptain,StartTime,EndTime,DestinationId,DestinationName,DestinationVariantName,WatersIdList,WatersNameList,Distance, \
-  Comments,SessionType,SessionGroupId,EfbSyncTime,Open,ChangeCount,LastModified,LastModification; \
+  Comments,SessionType,SessionGroupId,EfbSyncTime,Open,ChangeCount,LastModified,LastModification,ecrid; \
   efa2logbook;(DATEDIFF(Date, '{sports_year_start}') >= 0) AND (DATEDIFF(Date, '{sports_year_start}') <= 365);sort=-Logbookname.#EntryId
