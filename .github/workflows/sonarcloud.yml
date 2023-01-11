@@ -55,7 +55,7 @@ jobs:
             # mandatory
             -Dsonar.projectKey=brv1882_efacloud
             -Dsonar.organization=brv1882
-            -Dsonar.sources=**/* 
+            -Dsonar.sources=authentication,config,install,license,pages,public,tasks_queue,templates,api,classes		forms		js		log		pdfs		resources	tcpdf		uploads 
             # Comma-separated paths to directories containing main source files.          
             #optional, default is project base directory
             # When you need the analysis to take place in a directory other than the one from which it was launched
