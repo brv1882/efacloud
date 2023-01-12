@@ -1,0 +1,28 @@
+tags;required;name;value;label;type;class;size;maxlength
+<span id='vSpanSystemData'><div class='w3-row'><div class='w3-col l3'>;;Damage;;Schadensmeldung Nr.;text;display-bold;90%;20
+</div><div class='w3-col l3'>;;ecrid;;eindeutige Datensatz-Referenz (ecrid);text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l3'>;;LastModified;;zuletzt geändert am;text;display-bold;90%;20
+</div><div class='w3-col l3'>;;ChangeCount;;Version (Änderungszähler);text;display-bold;90%;20
+</div><div class='w3-col l3'>;;LastModification;;Art der letzten Änderung;text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l1'><hr>;;_no_input;; ;;;
+</div></div></span><div class='w3-row'><div class='w3-col l2' id='editDamage-BoatId'>;;BoatId;;Boot;text;;85%;20
+</div><div class='w3-col l2'>;;Severity;;Das Boot ist;"select UNDEFINED=;FULLYUSEABLE=voll benutzbar;LIMITEDUSEABLE=eingeschränkt benutzbar;NOTUSEABLE=nicht benutzbar";;90%;50
+</div></div><div class='w3-row'><div class='w3-col l1'>;;Description;;Beschreibung;textarea;;4;
+</div></div><div class='w3-row'><div class='w3-col l4'>;;ReportDate;;Gemeldet am;date;;90%;20
+</div><div class='w3-col l4'>;;ReportTime;;Berichtet um;text;;90%;10
+</div><div class='w3-col l2'>;;ReportedByPersonId;;Gemeldet durch;text;;85%;50
+</div></div><div class='w3-row'><div class='w3-col l4'><br>;;Fixed;;Behoben;checkbox;;;
+</div><div class='w3-col l4'><br>;;Claim;;Versicherungsschaden;checkbox;;;
+</div><div class='w3-col l2'>;;RepairCosts;;Reparaturkosten;text;;90%;50
+</div></div><div class='w3-row'><div class='w3-col l4'>;;FixDate;;Behoben am;date;;90%;20
+</div><div class='w3-col l4'>;;FixTime;;Behoben um;text;;90%;10
+</div><div class='w3-col l2'>;;FixedByPersonId;;Behoben durch;text;;85%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;LogbookText;;Fahrtenbuchtext;textarea;;4;
+</div><div class='w3-col l2'>;;Notes;;Anmerkungen;textarea;;4;
+</div></div><div class='w3-row'><div class='w3-col l1' id='changed-values-text'>;;_no_input; ;;;;;
+</div></div><div class='w3-row'><div class='w3-col l1'> <br>;;submit;Jetzt ändern;;submit;formbutton;;
+</div></div>;;_no_input;;;;;;
+<li><span class='helptext'>;;_help_text;;Die Datenänderung wirkt im efaCloud Server sofort, in angebundenen efa-PCs erst nach der nächsten Synchronisation.;;;;
+</span></li><li><span class='helptext'>;;_help_text;;Aus technischen Gründen wird das Formular bei fehlerhaften Angaben komplett zurückgesetzt.;;;;
+</span></li><li><span class='helptext'>;;_help_text;;Datensätze mit Art der letzten Änderung 'delete' können nicht mehr modifiziert werden.;;;;
+</span></li>;;_help_text;;;;;;

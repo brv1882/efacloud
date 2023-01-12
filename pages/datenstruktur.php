@@ -8,74 +8,77 @@ include_once "../classes/init.php";
 $download_csv = (isset($_GET["download"])) ? intval($_GET["download"]) : 0;
 
 $is_efa_cloud = (strcasecmp($toolbox->config->app_name, "efaCloud") == 0);
-if ($is_efa_cloud) {
+if ($is_efa_cloud)
     include_once "../classes/efa_tables.php";
-    $efa_tables = new Efa_tables($toolbox, $socket);
-    include_once "../classes/efa_dataedit.php";
-    $efa_dataedit = new Efa_dataedit($toolbox, $socket);
-}
 
 // === APPLICATION LOGIC ==============================================================
 
 $structure_html = "<h4>Datenstruktur</h4>";
 $total_table_count = 0;
+$total_record_count = 0;
 $table_names = $socket->get_table_names();
 $summary = "";
-$csv .= ($is_efa_cloud) ? "Tabellenname;Tabelle versioniert;Spaltenname;" .
-         "Datentyp;Datenlänge;UUID;Schlüssel;Schlüsselkorrektur\n" : "Tabellenname;Spaltenname;Datentyp;Datenlänge\n";
+$csv = ($is_efa_cloud) ? "Tabellenname;Tabelle versioniert;Spaltenname;" .
+         "Datentyp;Datenlänge;Objekt ID;Schlüssel;Schlüsselkorrektur\n" : "Tabellenname;Spaltenname;Datentyp;Datenlänge\n";
 foreach ($table_names as $tn) {
     $record_count = $socket->count_records($tn);
-    $structure_html .= "<h5>" . $tn . " (" . $record_count . " Datensätze)</h5>";
-    $data_key = ($is_efa_cloud) ? Efa_tables::$key_fields[$tn] : $socket->get_indexes($tn, ! $is_efa_cloud);
-    $data_keys = "";
-    $efa_versionized = ";";
-    if ($is_efa_cloud)
-        foreach ($data_key as $key_field) {
-            if (strcasecmp($key_field, "ValidFrom") == 0) {
-                $structure_html .= "<p>Die Tabelle ist versioniert.</p>";
-                $efa_versionized = "x;";
-            }
-            $data_keys .= $key_field . ", ";
-        }
-    $efa_fixid_auto_field = ($is_efa_cloud && isset($efa_tables->fixid_auto_field[$tn])) ? $efa_tables->fixid_auto_field[$tn] : false;
-    $efa_fix_comment = "";
-    $efa_key_comment = "";
-    $efa_UUIDcomment = "";
-    $efa_UUIDlistComment = "";
-    $efa_fix_csv = "";
-    $efa_key_csv = "";
-    $efa_UUIDcsv = "";
-    $total_record_count += $record_count;
-    $total_table_count ++;
     $column_names = $socket->get_column_names($tn);
     $column_types = $socket->get_column_types($tn);
+    $structure_html .= "<h5>" . $tn . " (" . $record_count . " Datensätze mit je " . count($column_names) .
+             " Spalten)</h5>";
+    if ($is_efa_cloud && array_key_exists($tn, Efa_tables::$efa_data_key_fields)) {
+        $data_key = Efa_tables::$efa_data_key_fields[$tn];
+        $data_keys = "";
+        $efa_versionized = ";";
+        if ($is_efa_cloud)
+            foreach ($data_key as $key_field) {
+                if (strcasecmp($key_field, "ValidFrom") == 0) {
+                    $structure_html .= "<p>Die Tabelle ist versioniert.</p>";
+                    $efa_versionized = "x;";
+                }
+                $data_keys .= $key_field . ", ";
+            }
+        $efa_keyfixing_field = ($is_efa_cloud && array_key_exists($tn, Efa_tables::$efa_autoincrement_fields)) ? Efa_tables::$efa_autoincrement_fields[$tn] : false;
+        $efa_fix_comment = "";
+        $efa_key_comment = "";
+        $efa_UUIDcomment = "";
+        $efa_UUIDlistComment = "";
+        $efa_fix_csv = "";
+        $efa_key_csv = "";
+        $efa_UUIDcsv = "";
+    } else {
+        $data_key = $socket->get_indexes($tn, ! $is_efa_cloud);
+    }
+    $total_record_count += $record_count;
+    $total_table_count ++;
     $structure_html .= "<ul>";
     $all_columns = "";
     $c = 0;
     foreach ($column_names as $cn) {
         // efaCloud tables have a lot more structure meanings as legacy.
         if ($is_efa_cloud) {
-            $efa_fix_comment = ($efa_fixid_auto_field) ? ((strcasecmp($efa_fixid_auto_field, $cn) == 0) ? " [Schlüssel mit zentraler Korrektur]" : "") : "";
-            $efa_fix_csv = ($efa_fixid_auto_field) ? ((strcasecmp($efa_fixid_auto_field, $cn) == 0) ? "x;" : ";") : ";";
+            $efa_fix_comment = ($efa_keyfixing_field) ? ((strcasecmp($efa_keyfixing_field, $cn) == 0) ? " [Schlüssel mit zentraler Korrektur]" : "") : "";
+            $efa_fix_csv = ($efa_keyfixing_field) ? ((strcasecmp($efa_keyfixing_field, $cn) == 0) ? "x;" : ";") : ";";
             $efa_key_comment = (strlen($efa_fix_comment) > 0) ? "" : ((strpos($data_keys, $cn . ",") === false) ? "" : " [Feld für Datenschlüssel]");
-            $efa_key_csv = ((strlen($efa_fix_comment) > 0) && (strlen($efa_fix_csv) == 0)) ? "" : ((strpos($data_keys, 
-                    $cn . ",") === false) ? ";" : "x;");
-            $efa_UUIDcomment = (strpos($efa_dataedit->UUID_fields, $cn . ";") === false) ? "" : " [UUID]";
-            $efa_UUIDlistComment = (strpos($efa_dataedit->multi_UUID_fields, $cn . ";") === false) ? "" : " [UUID-Liste]";
-            $efa_UUIDcsv = (strpos($efa_dataedit->UUID_fields, $cn . ";") === false) ? ((strpos(
-                    $efa_dataedit->multi_UUID_fields, $cn . ";") === false) ? ";" : "n;") : "1;";
-        } else if (isset($data_key[$cn])) {
-            $efa_key_comment = $data_key[$cn];
-        }
+            $efa_key_csv = ((strlen($efa_fix_comment) > 0) && (strlen($efa_fix_csv) == 0)) ? "" : ((in_array(
+                    $cn, $data_key)) ? "x;" : ";");
+            $efa_UUIDcomment = (in_array($cn, Efa_tables::$UUID_field_names)) ? " [Objekt ID]" : ((in_array(
+                    $cn, Efa_tables::$UUIDlist_field_names)) ? " [Objekt ID-Liste]" : "");
+            $efa_UUIDcsv = (in_array($cn, Efa_tables::$UUID_field_names)) ? "1" : ((in_array($cn, 
+                    Efa_tables::$UUIDlist_field_names)) ? "n;" : ";");
+        } else 
+            if (isset($data_key[$cn])) {
+                $efa_key_comment = $data_key[$cn];
+            }
         $cn_html = ((strlen($efa_fix_comment) > 0) || (strlen($efa_key_comment) > 0)) ? "<b>" . $cn . "</b>" : $cn;
-        $structure_html .= "<li>" . $cn_html . " - " . $column_types[$c] . $efa_fix_comment . " " . $efa_key_comment .
-                 $efa_UUIDcomment . $efa_UUIDlistComment . "</li>";
+        $structure_html .= "<li>" . $cn_html . " - " . $column_types[$c] . $efa_fix_comment . " " .
+                 $efa_key_comment . $efa_UUIDcomment . "</li>";
         $ctp = explode("(", $column_types[$c]);
         $ctype = $ctp[0];
         $csize = ((count($ctp) > 1) && (strlen($ctp[1]) > 0)) ? intval(
-                substr($ctp[1], 0, strlen($ctp[1]) - 1)) : 0;
-                $csv .= $tn . ";" . $efa_versionized . $cn . ";" . $ctype . ";" . $csize . ";" . $efa_UUIDcsv . $efa_key_csv .
-                 $efa_fix_csv . "\n";
+                mb_substr($ctp[1], 0, mb_strlen($ctp[1]) - 1)) : 0;
+        $csv .= $tn . ";" . $efa_versionized . $cn . ";" . $ctype . ";" . $csize . ";" . $efa_UUIDcsv .
+                 $efa_key_csv . $efa_fix_csv . "\n";
         $all_columns .= $cn . ",";
         $c ++;
     }
@@ -86,7 +89,7 @@ foreach ($table_names as $tn) {
 }
 $structure_html .= "<h5>In Summe " . $total_table_count . " Tabellen mit " . $total_record_count .
          " Datensätzen</h5>";
-$structure_html .= "<p>Für den Tabellenexport zusammengefasst:</p><p>" . $summary . "</p>";
+// $structure_html .= "<p>Für den Tabellenexport zusammengefasst:</p><p>" . $summary . "</p>";
 
 // return file before page output starts.
 if ($download_csv > 0) {

@@ -1,0 +1,13 @@
+tags;required;name;value;label;type;class;size;maxlength
+<span id='vSpanSystemData'><div class='w3-row'><div class='w3-col l3'>;;Sequence;;Zähler für;text;display-bold;90%;20
+</div><div class='w3-col l3'>;;ecrid;;eindeutige Datensatz-Referenz (ecrid);text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l3'>;;LastModified;;zuletzt geändert am;text;display-bold;90%;20
+</div><div class='w3-col l3'>;;ChangeCount;;Version (Änderungszähler);text;display-bold;90%;20
+</div><div class='w3-col l3'>;;LastModification;;Art der letzten Änderung;text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l1'><hr>;;_no_input;; ;;;
+</div></div></span><div class='w3-row'><div class='w3-col l2'>;;IntValue;;IntValue;text;;10;12
+</div><div class='w3-col l2'>;;LongValue;;LongValue;text;;18;30
+</div></div>;;_no_input;;;;;;
+<li><span class='helptext'>;;_help_text;;Systemzähler können nicht geändert werden, weil es sonst zu Fehlern in der Anwendung kommen kann.;;;;
+</span></li><li><span class='helptext'>;;_help_text;;Aus technischen Gründen wird das Formular bei fehlerhaften Angaben komplett zurückgesetzt.;;;;
+</span></li>;;_help_text;;;;;;

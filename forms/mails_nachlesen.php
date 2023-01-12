@@ -107,7 +107,7 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 echo $toolbox->form_errors_to_html($form_errors);
 echo $form_info;
 if ($todo == 1)
-    echo $form_to_fill->get_html(false);
+    echo $form_to_fill->get_html();
 elseif ($todo == 2)
     echo $mails_formatted; // enable file upload
 ?>

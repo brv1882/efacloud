@@ -139,8 +139,8 @@ if ($action == 0) {
                      $trip_record["ecrid"] . "'></td><td>" . $trip_record["Date"] . "</td><td>" .
                      $trip_record["Boot"] . "</td><td>" . $trip_record["Ziel"] . "</td><td>" . date("d.m.Y", 
                             intval(
-                                    substr($trip_record["LastModified"], 0, 
-                                            strlen($trip_record["LastModified"]) - 3))) . "</td><td>" .
+                                    mb_substr($trip_record["LastModified"], 0, 
+                                            mb_strlen($trip_record["LastModified"]) - 3))) . "</td><td>" .
                      $trip_record["AllCrewNames"] . "</td></tr>";
         }
         $trips_table .= "</table><br><input type='submit' value='Ausgewählte Fahrten löschen' class='formbutton'/></form>";
@@ -157,7 +157,7 @@ if ($action == 0) {
                         $_SESSION["User"][$toolbox->users->user_id_field_name], "efa2logbook", $matching);
                 if (strlen($trip_deletion_result) == 0)
                     $deletion_result .= "<b>" . $record_to_delete["Logbookname"] . ": " .
-                             $record_to_delete["EntryId"] . "</b><br>" . json_encode($record_to_delete) .
+                    $record_to_delete["EntryId"] . "</b><br>" . json_encode(str_replace("\"", "\\\"", $record_to_delete)) .
                              "<hr>";
                 else
                     $deletion_result .= "<b>" . $record_to_delete["Logbookname"] . ": " .

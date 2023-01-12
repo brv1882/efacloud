@@ -145,15 +145,15 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 ?>
 <!-- START OF content -->
 <div class="w3-container">
-	<h3>Mein Profil ändern</h3>
-	<p>Hier kann das persönliche Profil geändert werden.</p>
+	<h3>Persönliches Profil ändern</h3>
+	<p>Hier kannst Du Dein persönliches Profil ändern.</p>
 </div>
 
 <div class="w3-container">
 <?php
 echo $toolbox->form_errors_to_html($form_errors);
 if ($todo < 2) { // step 1. No special texts for output
-    echo $form_to_fill->get_html($fs_id);
+    echo $form_to_fill->get_html();
     echo '<h5><br />Ausfüllhilfen</h5><ul>';
     echo $form_to_fill->get_help_html();
     echo "</ul>";

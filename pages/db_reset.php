@@ -12,10 +12,8 @@ $do_reset = (strcmp($_GET["do_reset"], "now") == 0);
 
 if ($do_reset) {
     // ===== create data base
-    include_once '../classes/efa_tables.php';
-    $efa_tables = new Efa_tables($toolbox, $socket);
     include_once '../classes/efa_tools.php';
-    $efa_tools = new Efa_tools($efa_tables, $toolbox);
+    $efa_tools = new Efa_tools($toolbox, $socket);
     $result_bootstrap = $efa_tools->init_efa_data_base(true, true);
 }
 

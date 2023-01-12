@@ -1,0 +1,83 @@
+tags;required;name;value;label;type;class;size;maxlength
+<span id='vSpanSystemData'><div class='w3-row'><div class='w3-col l3'>;;Id;;Objekt ID;text;display-bold;90%;36
+</div><div class='w3-col l3'>;;ecrid;;eindeutige Datensatz-Referenz (ecrid);text;display-bold;90%;20
+</div><div class='w3-col l3'>;;ValidFrom;;gültig ab;text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l3'>;;LastModified;;zuletzt geändert am;text;display-bold;90%;20
+</div><div class='w3-col l3'>;;ChangeCount;;Version (Änderungszähler);text;display-bold;90%;20
+</div><div class='w3-col l3'>;;LastModification;;Art der letzten Änderung;text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l1'><hr>;;_no_input;; ;;;
+</div></div></span><div class='w3-row'><div class='w3-col l3' id='vDiv-wayOfChange'>;;wayOfChange;;"Art der Änderung<sup class='eventitem' id='showhelptext_VersionierteDatenAnpassen'>&#9432;</sup>";"select 0=Inhalte ändern;1=Gültig Bis ändern;2=eine neue Version erzeugen";#versionized-wayOfChange;90%;50
+</div><div class='w3-col l3' id='vDiv-ValidityFromDate'>;;ValidityFromDate;;<span id='valDateLabel'>gültig bis Datum</span>;date;#versionized-ValidityFromDate;90%;50
+</div><div class='w3-col l3' id='vDiv-ValidityFromTime'>;;ValidityFromTime;;<span id='valTimeLabel'>gültig bis Zeit</span>;text;#versionized-ValidityFromTime;90%;50
+</div></div><span id='versionized-data'><div class='w3-row'><div class='w3-col l1'><hr>;;_no_input;; ;;;
+</div></div><div class='w3-row'><div class='w3-col l2'>;;Name;;Name;text;;90%;50
+</div><div class='w3-col l2'>;;NameAffix;;Namenszusatz;text;;90%;50
+</div></div><div class='w3-row'><div class='w3-col l1'>;;_no_input;;"<br><b>Bootstyp und Varianten<sup class='eventitem' id='showhelptext_efaTypes'>&#9432;</sup></b>";;;
+</div></div><div class='w3-row'><div class='w3-col l4'>;;VariantCount;;Anzahl der Varianten;"select 0=;1=eine;2=zwei;3=drei;4=vier";#boats-VariantCount;80%;12
+</div><div class='w3-col l4'>;;DefaultVariant;;übliche Variante;text;;80%;12
+</div><div class='w3-col l4'>;;LastVariant;;letzte Variante;text;display-bold;80%;12
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-1'>;;TypeVariant1;;<b>erste Typvariante</b><br>Nummer;text;#boats-TypeVariant-1;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-1'>;;TypeCoxing1;;gesteuert;select $named_options;#boats-TypeCoxing-1;90%;50
+</div><div class='w3-col l2 boatvariant-1'>;;TypeSeats1;;Anzahl Sitze;select $named_options;#boats-TypeSeats-1;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-1'>;;TypeType1;;Bootstyp;select $named_options;#boats-TypeType-1;90%;50
+</div><div class='w3-col l2 boatvariant-1'>;;TypeRigging1;;Riggerung;select $named_options;#boats-TypeRigging-1;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-1'>;;TypeDescription1;;"Beschreibung (Bitte kein ';' verwenden)";text;#boats-TypeDescription-1;90%;150
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-2'>;;TypeVariant2;;<b>zweite Typvariante</b><br>Nummer;text;#boats-TypeVariant-2;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-2'>;;TypeCoxing2;;gesteuert;select $named_options;#boats-TypeCoxing-2;90%;50
+</div><div class='w3-col l2 boatvariant-2'>;;TypeSeats2;;Anzahl Sitze;select $named_options;#boats-TypeSeats-2;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-2'>;;TypeType2;;Bootstyp;select $named_options;#boats-TypeType-2;90%;50
+</div><div class='w3-col l2 boatvariant-2'>;;TypeRigging2;;Riggerung;select $named_options;#boats-TypeRigging-2;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-2'>;;TypeDescription2;;"Beschreibung (Bitte kein ';' verwenden)";text;#boats-TypeDescription-2;90%;150
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-3'>;;TypeVariant3;;<b>dritte Typvariante</b><br>Nummer;text;#boats-TypeVariant-3;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-3'>;;TypeCoxing3;;gesteuert;select $named_options;#boats-TypeCoxing-3;90%;50
+</div><div class='w3-col l2 boatvariant-3'>;;TypeSeats3;;Anzahl Sitze;select $named_options;#boats-TypeSeats-3;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-3'>;;TypeType3;;Bootstyp;select $named_options;#boats-TypeType-3;90%;50
+</div><div class='w3-col l2 boatvariant-3'>;;TypeRigging3;;Riggerung;select $named_options;#boats-TypeRigging-3;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-3'>;;TypeDescription3;;"Beschreibung (Bitte kein ';' verwenden)";text;#boats-TypeDescription-3;90%;150
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-4'>;;TypeVariant4;;<b>vierte Typvariante</b><br>Nummer;text;#boats-TypeVariant-4;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-4'>;;TypeCoxing4;;gesteuert;select $named_options;#boats-TypeCoxing-4;90%;50
+</div><div class='w3-col l2 boatvariant-4'>;;TypeSeats4;;Anzahl Sitze;select $named_options;#boats-TypeSeats-4;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-4'>;;TypeType4;;Bootstyp;select $named_options;#boats-TypeType-4;90%;50
+</div><div class='w3-col l2 boatvariant-4'>;;TypeRigging4;;Riggerung;select $named_options;#boats-TypeRigging-4;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2 boatvariant-4'>;;TypeDescription4;;"Beschreibung (Bitte kein ';' verwenden)";text;#boats-TypeDescription-4;90%;150
+;;changed-TypeVariant;;;hidden;#changed-TypeVariant;;
+;;changed-TypeCoxing;;;hidden;#changed-TypeCoxing;;
+;;changed-TypeSeats;;;hidden;#changed-TypeSeats;;
+;;changed-TypeType;;;hidden;#changed-TypeType;;
+;;changed-TypeRigging;;;hidden;#changed-TypeRigging;;
+;;changed-TypeDescription;;;hidden;#changed-TypeDescription;;
+</div></div><div class='w3-row'><div class='w3-col l1'>;;_no_input;;<br><b>Nutzungsregeln</b>;;;
+</div></div><div class='w3-row'><div class='w3-col l2'>;;OnlyWithBoatCaptain;;nur mit Steuermann;checkbox;;;
+</div></div><div class='w3-row'><div class='w3-col l2'>;;AllowedGroupIdList;;Liste der zugelassenen Gruppen;text;;90%;50
+</div><div class='w3-col l2'>;;MaxCrewWeight;;maximales Mannschaftsgewicht;text;;10;12
+</div></div><div class='w3-row'><div class='w3-col l2'>;;RequiredGroupId;;nur für Gruppe;text;;90%;50
+</div><div class='w3-col l2'>;;MaxNotInGroup;;maximale Anzahl Gruppenfremder;text;;10;12
+</div></div><div class='w3-row'><div class='w3-col l2'>;;DefaultCrewId;;Standard Mannschaft;text;;90%;50
+</div><div class='w3-col l2'>;;DefaultSessionType;;Standard Fahrtart;text;;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;DefaultDestinationId;;Standardziel;text;;90%;50
+</div></div><div class='w3-row'><div class='w3-col l1'>;;_no_input;;<br><b>Bestandsdaten</b>;;;
+</div></div><div class='w3-row'><div class='w3-col l2'>;;Manufacturer;;Hersteller;text;;90%;50
+</div><div class='w3-col l2'>;;ManufactionDate;;Herstelldatum;date;;10;20
+</div></div><div class='w3-row'><div class='w3-col l2'>;;Model;;Modell;text;;90%;50
+</div><div class='w3-col l2'>;;SerialNo;;Seriennummer;text;;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;Owner;;Eigentümer;text;;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;PurchaseDate;;Kaufdatum;date;;10;20
+</div><div class='w3-col l4'>;;PurchasePrice;;Kaufpreis;text;;85%;50
+</div><div class='w3-col l4'>;;PurchasePriceCurrency;;Währung Kaufpreis;text;;80%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;SellingDate;;Verkaufsdatum;date;;10;20
+</div><div class='w3-col l2'>;;SellingPrice;;Verkaufspreis;text;;90%;50
+</div><div class='w3-col l2'>;;InsuranceValue;;Versicherungswert;text;;90%;50
+</div></div><div class='w3-row'><div class='w3-col l1'>;;_no_input;;<br><b>Sonstiges</b>;;;
+</div></div><div class='w3-row'><div class='w3-col l2'>;;FreeUse1;;Freifeld 1;text;;90%;50
+</div><div class='w3-col l2'>;;FreeUse2;;Freifeld 2;text;;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;FreeUse3;;Freifeld 3;text;;90%;50
+</div><div class='w3-col l2'>;;EfbId;;EfbId;text;;90%;50
+</div></div><div class='w3-row'><br><div class='w3-col l2'>;;ExcludeFromStatistics;;von Statistik ausschließen;checkbox;;;
+</div><div class='w3-col l4'>;;Invisible;;Unsichtbar;checkbox;;;
+</div><div class='w3-col l4'>;;Deleted;;Gelöscht;checkbox;;;
+</div></div></span><div class='w3-row'><div class='w3-col l1'> <br>;;submit;Jetzt ändern;;submit;formbutton;;
+</div></div>;;_no_input;;;;;;
+<li><span class='helptext'>;;_help_text;;Die Datenänderung wirkt im efaCloud Server sofort, in angebundenen efa-PCs erst nach der nächsten Synchronisation.;;;;
+</span></li><li><span class='helptext'>;;_help_text;;Aus technischen Gründen wird das Formular bei fehlerhaften Angaben komplett zurückgesetzt.;;;;
+</span></li><li><span class='helptext'>;;_help_text;;Datensätze mit Art der letzten Änderung 'delete' können nicht mehr modifiziert werden.;;;;
+</span></li>;;_help_text;;;;;;

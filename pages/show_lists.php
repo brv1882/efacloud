@@ -66,6 +66,7 @@ if (isset($_GET["zip"])) {
         $data_errors = $list->get_zip($osorts_list, $ofilter, $ofvalue, $_SESSION["User"]);
     }
 }
+$helpicon = (file_exists("../helpdocs/Listen.html")) ? "<sup class='eventitem' id='showhelptext_Listen'>&#9432;</sup>" : "";
 
 // ===== start page output
 echo file_get_contents('../config/snippets/page_01_start');
@@ -75,7 +76,7 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 ?>
 <!-- START OF content -->
 <div class="w3-container">
-	<h2><?php echo $list_name; ?></h2>
+	<h2><?php echo $list_name . $helpicon; ?></h2>
 	<p></p>
 	<?php
 if ($list_id == 0) {

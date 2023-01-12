@@ -1,0 +1,20 @@
+tags;required;name;value;label;type;class;size;maxlength
+<span id='vSpanSystemData'><div class='w3-row'><div class='w3-col l3'>;;Id;;Objekt Id;text;display-bold;90%;36
+</div><div class='w3-col l3'>;;ecrid;;eindeutige Datensatz-Referenz (ecrid);text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l3'>;;LastModified;;zuletzt geändert am;text;display-bold;90%;20
+</div><div class='w3-col l3'>;;ChangeCount;;Version (Änderungszähler);text;display-bold;90%;20
+</div><div class='w3-col l3'>;;LastModification;;Art der letzten Änderung;text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l1'><hr>;;_no_input;; ;;;
+</div></div></span><div class='w3-row'><div class='w3-col l2'>;;Logbook;;Fahrtenbuch;text;;20;50
+</div><div class='w3-col l2'>;;Name;;Bezeichnung der Wanderfahrt;text;;20;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;Route;;Route;text;;20;50
+</div><div class='w3-col l2'>;;Organizer;;Verantwortlich (Name);text;;20;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;StartDate;;Beginn am;date;;10;20
+</div><div class='w3-col l2'>;;EndDate;;Ende am;date;;10;20
+</div></div><div class='w3-row'><div class='w3-col l2'>;;ActiveDays;;Aktive Tage (Anzahl);text;;10;12
+</div></div><div class='w3-row'><div class='w3-col l1'> <br>;;submit;Jetzt ändern;;submit;formbutton;;
+</div></div>;;_no_input;;;;;;
+<li><span class='helptext'>;;_help_text;;Die Datenänderung wirkt im efaCloud Server sofort, in angebundenen efa-PCs erst nach der nächsten Synchronisation.;;;;
+</span></li><li><span class='helptext'>;;_help_text;;Aus technischen Gründen wird das Formular bei fehlerhaften Angaben komplett zurückgesetzt.;;;;
+</span></li><li><span class='helptext'>;;_help_text;;Datensätze mit Art der letzten Änderung 'delete' können nicht mehr modifiziert werden.;;;;
+</span></li>;;_help_text;;;;;;

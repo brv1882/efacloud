@@ -2,11 +2,18 @@
 
 /**
  * static class file for the sql definition of efa tables to build and adjust the table layout. The expected
- * layout is defined in Efa_tables::$db_layout_version_target.
+ * layout is defined in Efa_tables $db_layout_version_target.
  */
 class Efa_db_layout
 {
 
+    /**
+     * The version of the data base layout targeted for this efaCloud software release. If the configuration
+     * has a different version, The data base layout shall be adjusted during the upgrade procedure. Integer
+     * value.
+     */
+    public static $db_layout_version_target = 9;
+    
     /**
      * The data base layout, to be read from a ../config/db_layout/Vx file. . It is an array of versions,
      * therein elements as associative array of tables, therein as associative array of columns, each column
@@ -192,7 +199,7 @@ class Efa_db_layout
                          "` INT UNSIGNED NOT NULL AUTO_INCREMENT";
             }
         }
-        $sql_cmds[0] = substr($sql_cmd, 0, strlen($sql_cmd) - 2) . ")";
+        $sql_cmds[0] = mb_substr($sql_cmd, 0, mb_strlen($sql_cmd) - 2) . ")";
         return $sql_cmds;
     }
 
@@ -222,7 +229,8 @@ class Efa_db_layout
      * @param int $max_version
      *            the maximum version to check for
      */
-    public static function compare_db_layout (Tfyh_socket $socket, int $max_version)
+    // TODO function since Jan 2023 / 2.3.2_09 obsolete. Remove some day
+    private static function compare_db_layout (Tfyh_socket $socket, int $max_version)
     {
         $db_layout_read = [];
         $table_names = $socket->get_table_names();
@@ -240,8 +248,8 @@ class Efa_db_layout
         $not_matching = "";
         for ($v = 1; $v <= $max_version; $v ++) {
             $matched = true;
-            $not_matching = "Vergleiche Version " . $v . "\n";
-            $not_matching .= "-------------------\n";
+            $not_matching .= "\nVergleiche Version " . $v . "\n";
+            $not_matching .= "--------------------\n";
             $db_layout = self::db_layout($v);
             foreach ($db_layout as $table_name => $table_columns) {
                 if (isset($db_layout_read[$table_name])) {
@@ -273,7 +281,7 @@ class Efa_db_layout
                 return $v;
         }
         file_put_contents("../log/db_layout_check.log", $not_matching);
-        return "Keine passende Version gefunden.";
+        return "Keine passende Version gefunden.<br>Details siehe unten sowie in der Datei '../log/db_layout_check.log'";
     }
 }
     

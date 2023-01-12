@@ -17,12 +17,14 @@ users.user_archive_table_name=""
 users.user_account_field_name="efaAdminName"
 users.user_firstname_field_name="Vorname"
 users.user_lastname_field_name="Nachname"
-users.use_subscriptions=false
+users.use_subscriptions=true
 users.use_workflows=true
+users.useradmin_workflows={}
 users.use_concessions=true
 users.useradmin_role="admin"
+users.self_registered_role="anonymous"
 users.anonymous_role="anonymous"
-users.ownerid_fields=efaCloudLog.Author;efaCloudCleansed.Author
+users.ownerid_fields=efaCloudLog.Author
 
 # module config.php
 config.app_name="efaCloud"
@@ -32,7 +34,7 @@ config.parameter_table_name=""
 config.forbidden_dirs="all_mails_localhost,classes,config,config/access,install, \
   log,log/backup,log/contentsize,log/sessions,log/uploads,pdfs, \
   tasks_queue,tcpdf,templates,uploads"
-config.public_dirs="api,forms,js,license,pages,public,resources"
+config.public_dirs="api,forms,helpdocs,js,license,pages,public,resources"
 
 # module config.php, default values
 default.DamageAgeDays=720
@@ -86,7 +88,5 @@ history.efa2sessiongroups="ecrhis"
 maxversions.efa2sessiongroups=20
 history.efaCloudUsers="ecrhis"
 maxversions.efaCloudUsers=20
-history.efaCloudDoodle="ecrhis"
-maxversions.efaCloudDoodle=20
 # --- border history section ---
 #

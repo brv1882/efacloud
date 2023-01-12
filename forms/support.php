@@ -30,11 +30,11 @@ if ($done > 0) {
         $url = 'https://www.efacloud.org/support/request.php';
         $data = $entered_data;
         if (isset($entered_data["SendLogs"]) && (strlen($entered_data["SendLogs"]) > 0)) {
-            $monitoring_report = $toolbox->logger->zip_logs();
+            $monitoring_report = "../log/" . $toolbox->logger->zip_logs();
             $data["monitoring_report_zip"] = str_replace("=", "_", 
                     str_replace("/", "-", 
                             str_replace("+", "*", 
-                                    base64_encode(utf8_encode(file_get_contents($monitoring_report))))));
+                                    base64_encode(file_get_contents($monitoring_report)))));
         }
         
         unset($data["SendLogs"]);
@@ -79,15 +79,16 @@ echo $toolbox->form_errors_to_html($form_errors);
 // ======== start with the display of either the next form, or the error messages.
 if ($todo == 1) {
     ?>
-	<p>Bitte lassen Sie mich Ihr Anliegen wissen. Ich versuche sobald wie
-		möglich zu helfen. In Urlaubszeiten kann es dabei schon mal zu
-		Verzögerungen kommen, normalerweise ist eine Antwort in etwa einer
-		Woche zu erwarten.</p>
+	<p>Bitte lass mich Dein Anliegen oder einen Wunsch an die
+		Funktionalität von efaCloud wissen. Ich versuche sobald wie möglich zu
+		helfen. In Urlaubszeiten kann es dabei schon mal zu Verzögerungen
+		kommen, normalerweise ist eine Antwort in etwa einer Woche zu
+		erwarten.</p>
 	<p>Ich freue mich auch über Feedback zu efaCloud, Anregungen und
 		Wünsche. Dieses Formular geht an 'efacloud.org'.</p>
 <?php
     // step 1. Show form.
-    echo $form_to_fill->get_html($fs_id);
+    echo $form_to_fill->get_html();
     // insert help text as right hand menu for mobile access
     echo '<h5><br />Ausfüllhilfen</h5><ul>';
     echo $form_to_fill->get_help_html();

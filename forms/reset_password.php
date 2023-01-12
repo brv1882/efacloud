@@ -135,7 +135,7 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 
 echo $form_result;
 echo $toolbox->form_errors_to_html($form_errors);
-echo $form_to_fill->get_html($fs_id);
+echo $form_to_fill->get_html();
 
 // ======== start with the display of either the next form, or the error messages.
 if ($todo == 1) { // step 1. no special texts for output

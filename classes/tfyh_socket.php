@@ -72,8 +72,8 @@ class Tfyh_socket
      */
     function __construct (Tfyh_toolbox $toolbox)
     {
-        $cfg = $toolbox->config->get_cfg();
-        $this->db_name = $cfg["db_name"];
+        $cfg_db = $toolbox->config->get_cfg_db();
+        $this->db_name = $cfg_db["db_name"];
         $this->mysqli = null;
         $this->toolbox = $toolbox;
         $this->debug_on = $toolbox->config->debug_level > 0;
@@ -125,14 +125,15 @@ class Tfyh_socket
         // do nothing, if connection is open.
         if (! is_null($this->mysqli) && $this->mysqli->ping())
             return true;
-        $cfg = $this->toolbox->config->get_cfg();
+        $cfg_db = $this->toolbox->config->get_cfg_db();
         // this will only connect with the correct settings in the settings_db file.
         try {
-            $this->mysqli = new mysqli($cfg["db_host"], $cfg["db_user"], $cfg["db_up"], $this->db_name);
+            $this->mysqli = new mysqli($cfg_db["db_host"], $cfg_db["db_user"], $cfg_db["db_up"], 
+                    $this->db_name);
         } catch (exception $e) {
             return "Data base connection failed: " . $e->getMessage();
         }
-            if ($this->mysqli->connect_error)
+        if ($this->mysqli->connect_error)
             return "Data base connection error: " . $this->mysqli->connect_error . ".";
         $this->mysqli_query("SET NAMES 'UTF8'", "open_socket");
         $ret = $this->mysqli_query("SELECT 1", "open_socket");
@@ -162,8 +163,8 @@ class Tfyh_socket
     }
 
     /**
-     * Get the numer of affected rows for the last sql command executed. See mysqli::$affected_rows for return
-     * value meaning.
+     * Get the number of affected rows for the last sql command executed. See mysqli::$affected_rows for
+     * return value meaning.
      * 
      * @return int|mixed mysqli->affected_rows
      */
@@ -347,7 +348,8 @@ class Tfyh_socket
             return $record;
         $users_cnt = $this->count_records($this->toolbox->users->user_table_name);
         if ($users_cnt == 0)
-            // the very first user must get the priviledge to be inserted anyway, with user admin rights.
+            // the very first user must get the priviledge to be inserted anyway, with user admin
+            // rights.
             return $record;
         
         $user = $this->find_record($table_name, $this->toolbox->users->user_id_field_name, $appUserID);
@@ -358,20 +360,35 @@ class Tfyh_socket
         
         if (($user === false) && ! isset($record["ID"]) && (! isset($record["Rolle"]) ||
                  (strcasecmp($record["Rolle"], $this->toolbox->users->anonymous_role) == 0)) &&
-                 (intval($record["Workflows"]) == 0) && (intval($record["Concessions"]) == 0))
+                 (intval($record["Workflows"]) == 0) && (intval($record["Concessions"]) == 0)) {
             // if the $record["ID"] is not set, this is a registration. Allow it for no user rights.
+            $record["Rolle"] = $this->toolbox->users->anonymous_role;
             return $record;
+        }
         
-        if (isset($record["ID"]) && intval($record["ID"]) != intval($user["ID"]))
-            // this is a different users data and the user is no useradmin: forbidden
-            return "User tried to modify other users data without useradmin role";
+        if (isset($record["ID"]) && intval($record["ID"]) != intval($user["ID"])) {
+            // role is no user admin, but workflows may allow to change other users data fields
+            $is_allowed_workflow = false;
+            foreach ($this->toolbox->users->useradmin_workflows as $allowed_workflow => $allowed_fields) {
+                if (! $is_allowed_workflow && ((intval($user["Workflows"]) & intval($allowed_workflow)) > 0)) {
+                    $is_allowed_workflow = true;
+                    foreach ($record as $key => $value) {
+                        if ((strcmp($key, "ID") != 0) && ! in_array($key, $allowed_fields))
+                            $is_allowed_workflow = false;
+                    }
+                }
+            }
+            if (! $is_allowed_workflow)
+                // this is a different users data and the user is no useradmin: forbidden
+                return "User tried to modify other users data without useradmin role or a respective workflow admission";
+        }
         
         // check change of role, workflows, concessions, userID or account name
         if (isset($record["Rolle"]) && (strcasecmp($record["Rolle"], $user["Rolle"]) != 0) &&
                  (strcasecmp($record["Rolle"], $this->toolbox->users->self_registered_role) != 0))
             return "User tried to modify own access role without useradmin role";
         if (isset($record["Workflows"]) && (intval($record["Workflows"]) != intval($user["Workflows"])))
-            return "User tried to modify own Workflows role without useradmin role";
+            return "User tried to modify own Workflows without useradmin role";
         if (isset($record["Concessions"]) && (intval($record["Concessions"]) != intval($user["Concessions"])))
             return "User tried to modify own Concessions role without useradmin role";
         if (isset($record[$this->toolbox->users->user_id_field_name]) && (intval(
@@ -428,20 +445,24 @@ class Tfyh_socket
             // information
             if (! isset($this->toolbox->config->settings_tfyh["history"][$table_name]) || (strcasecmp($key, 
                     $this->toolbox->config->settings_tfyh["history"][$table_name]) != 0))
-                // No quote escaping in the change log entry. This will be handled in execute_and_log().
+                // No quote escaping in the change log entry. This will be handled in
+                // execute_and_log().
                 $change_entry .= $key . '="' . $value . '", ';
         }
         // cut off last ", `";
-        $sql_cmd = substr($sql_cmd, 0, strlen($sql_cmd) - 3);
+        $sql_cmd = mb_substr($sql_cmd, 0, mb_strlen($sql_cmd) - 3);
         
-        $change_entry = substr($change_entry, 0, strlen($change_entry) - 2);
+        $change_entry = mb_substr($change_entry, 0, mb_strlen($change_entry) - 2);
         $sql_cmd .= ") VALUES ('";
-        foreach ($record as $key => $value)
-            $sql_cmd .= str_replace("'", "\'", $value) . "', '";
+        foreach ($record as $key => $value) {
+            if (is_null($value))
+                $sql_cmd = mb_substr($sql_cmd, 0, mb_strlen($sql_cmd) - 1) . "NULL, '";
+            else
+                $sql_cmd .= str_replace("'", "\'", str_replace("\\", "\\\\", $value)) . "', '";
+        }
         // cut off last ", '";
-        $sql_cmd = substr($sql_cmd, 0, strlen($sql_cmd) - 3);
+        $sql_cmd = mb_substr($sql_cmd, 0, mb_strlen($sql_cmd) - 3);
         $sql_cmd .= ")";
-        
         // set last write access timestamp, if used.
         if (file_exists("../log/lwa"))
             file_put_contents("../log/lwa/" . $appUserID, strval(time()));
@@ -560,7 +581,7 @@ class Tfyh_socket
                 }
             }
         }
-        $new_version = substr($new_version, 0, strlen($new_version) - 1);
+        $new_version = mb_substr($new_version, 0, mb_strlen($new_version) - 1);
         // add the new version, if there were changes, to the history array and return it.
         if ($any_changes)
             $record_versions[] = $new_version;
@@ -611,7 +632,7 @@ class Tfyh_socket
         }
         if (strlen($wherekeyis) == strlen("WHERE "))
             return "WHERE 1";
-        $wherekeyis = substr($wherekeyis, 0, strlen($wherekeyis) - 5);
+        $wherekeyis = mb_substr($wherekeyis, 0, mb_strlen($wherekeyis) - 5);
         return $wherekeyis;
     }
 
@@ -635,7 +656,7 @@ class Tfyh_socket
         if (strlen($matched_record) == 0)
             return "[undefined]";
         if (strrpos($matched_record, ", ") !== false)
-            $matched_record = substr($matched_record, 0, strlen($matched_record) - 2);
+            $matched_record = mb_substr($matched_record, 0, mb_strlen($matched_record) - 2);
         return $matched_record;
     }
 
@@ -700,24 +721,32 @@ class Tfyh_socket
             // skip matching keys, they are anyway equal
             foreach ($matching_keys as $matching_key)
                 $skip_update = $skip_update || (strcasecmp($key, $matching_key) == 0);
-            // check empty values. 2. If previous was not empty, and the record was numeric or a
-            // date, try NULL as value
-            if (! $skip_update && (! $value && (strlen($value) == 0)) && (is_numeric($prev_rec[$key]) ||
-                     is_numeric(strtotime($prev_rec[$key]))))
-                $sql_cmd .= "`" . $key . "` = NULL,";
-            else 
-                if (! $skip_update)
-                    $sql_cmd .= "`" . $key . "` = '" . str_replace("'", "\'", $value) . "',";
+            if (! $skip_update) {
+                if ((is_null($value) || (strlen($value) == 0)) && (is_numeric($prev_rec[$key]) ||
+                         is_numeric(strtotime($prev_rec[$key])))) {
+                    // replace empty numeric values. 2. If previous was not empty, and the record
+                    // was numeric
+                    // or a date, this will create a number format error, instead use NULL as value
+                    $sql_cmd .= "`" . $key . "` = NULL,";
+                } else {
+                    if (is_null($value))
+                        $sql_cmd .= "`" . $key . "` = NULL,";
+                    else
+                        $sql_cmd .= "`" . $key . "` = '" . str_replace("'", "\'", $value) . "',";
+                }
+            }
             // the change entry shall neither contain the keys, nor the record history to
             // prevent from too much redundant information
             if (! $skip_update && (strcmp($value, $prev_rec[$key]) !== 0) && (! isset(
                     $this->toolbox->config->settings_tfyh["history"][$table_name]) || (strcasecmp($key, 
                     $this->toolbox->config->settings_tfyh["history"][$table_name]) != 0)))
-                // No quote escaping in the change log entry. This will be handled in execute_and_log().
+                // No quote escaping in the change log entry. This will be handled in
+                // execute_and_log().
                 $change_entry .= $key . ': "' . $prev_rec[$key] . '"=>"' . $value . '", ';
         }
-        $sql_cmd = substr($sql_cmd, 0, strlen($sql_cmd) - 1);
-        $change_entry = substr($change_entry, 0, strlen($change_entry) - 2);
+        
+        $sql_cmd = mb_substr($sql_cmd, 0, mb_strlen($sql_cmd) - 1);
+        $change_entry = mb_substr($change_entry, 0, mb_strlen($change_entry) - 2);
         $sql_cmd .= " " . $this->clause_for_wherekeyis($table_name, $matching_keys, "=");
         
         // set last write access timestamp, if used.
@@ -773,7 +802,7 @@ class Tfyh_socket
         }
         // deletions will not change the last modified time stamp, because they
         // delete the data anyway.
-        $change_entry = substr($change_entry, 0, strlen($change_entry) - 2);
+        $change_entry = mb_substr($change_entry, 0, mb_strlen($change_entry) - 2);
         // ID used is **ID**
         $sql_cmd .= "DELETE FROM `" . $table_name . "` " .
                  $this->clause_for_wherekeyis($table_name, $matching, "=");
@@ -904,7 +933,7 @@ class Tfyh_socket
      *            "#EntryId".
      * @param bool $sort_ascending
      *            set to true to sort in ascending order, false to sort in descending order.
-     * @param bool $start_row
+     * @param int $start_row
      *            (default = 0) set a value > 0 to start not with the first row. Use it for getting chunks
      *            rather than all.
      * @return array of records, each being an array of key = column name and value = value. False in case of
@@ -921,7 +950,7 @@ class Tfyh_socket
         if (strlen($col_indicators) == 0)
             $col_indicators = "*";
         else
-            $col_indicators = substr($col_indicators, 0, strlen($col_indicators) - 2);
+            $col_indicators = mb_substr($col_indicators, 0, mb_strlen($col_indicators) - 2);
         // compile command parts: rows to choose
         $where_string = (strlen($condition) == 0) ? 'WHERE 1 ' : $this->clause_for_wherekeyis($table_name, 
                 $matching, $condition);
@@ -938,7 +967,7 @@ class Tfyh_socket
                 else
                     $sort_str .= "`" . $table_name . "`.`" . $sort_col . "` " . $sort_way . ", ";
             }
-            $sort_str = substr($sort_str, 0, strlen($sort_str) - 2);
+            $sort_str = mb_substr($sort_str, 0, mb_strlen($sort_str) - 2);
         }
         // compile command parts: limit or chunk of returned rows
         $limit_string = " LIMIT " . $start_row . "," . $max_rows;
@@ -1049,7 +1078,7 @@ class Tfyh_socket
         $csv = "";
         foreach ($cols as $col)
             $csv .= $col . ";";
-        $csv = substr($csv, 0, strlen($csv) - 1) . "\n";
+        $csv = mb_substr($csv, 0, mb_strlen($csv) - 1) . "\n";
         
         $col_indicators = "";
         foreach ($cols as $col_name)
@@ -1070,7 +1099,7 @@ class Tfyh_socket
                     $entries ++;
                 }
                 if ($entries > 0)
-                    $csv = substr($csv, 0, strlen($csv) - 1);
+                    $csv = mb_substr($csv, 0, mb_strlen($csv) - 1);
                 $csv .= "\n";
                 $row = $res->fetch_row();
             }
@@ -1103,7 +1132,7 @@ class Tfyh_socket
         $col_indicators = "";
         foreach ($cols as $col_name)
             $col_indicators .= "`" . $col_name . "`, ";
-        $col_indicators = substr($col_indicators, 0, strlen($col_indicators) - 2);
+        $col_indicators = mb_substr($col_indicators, 0, mb_strlen($col_indicators) - 2);
         $sql_cmd = "SELECT " . $col_indicators . " FROM " . $table_name . " " . $filter_and_order;
         $res = $this->mysqli_query($sql_cmd, "get_table_as_array");
         $rows = [];
@@ -1430,6 +1459,46 @@ class Tfyh_socket
     }
 
     /**
+     * Get the size in kB of all tables of the data base.
+     * 
+     * @return array the tables sizes as associative array, sorted by largest first.
+     */
+    public function get_table_sizes_kB ()
+    {
+        $sql_cmd = "SELECT TABLE_NAME AS `Table`, ROUND((DATA_LENGTH + INDEX_LENGTH) / 1024) AS `Size (kB)` " .
+                 "FROM information_schema.TABLES WHERE TABLE_SCHEMA = '" . $this->db_name .
+                 "' ORDER BY (DATA_LENGTH + INDEX_LENGTH) DESC;";
+        $res = $this->mysqli_query($sql_cmd, "get_table_sizes");
+        // put all values to the array, the column name being the key.
+        $ret = [];
+        $row = $res->fetch_row();
+        while ($row) {
+            // the fetch_row function is an iterator, returning an array with
+            // the table name always being at pos 0
+            $ret[$row[0]] = $row[1];
+            $row = $res->fetch_row();
+        }
+        $res->free();
+        foreach ($ret as $tablename => $tablesize) {
+            $column_names = $this->get_column_names($tablename);
+            $column_types = $this->get_column_types($tablename);
+            $total_blob_size_kB = 0;
+            for ($c = 0; $c < count($column_names); $c ++) {
+                if (strpos(strtolower($column_types[$c]), "text") !== false) {
+                    $sql_cmd = "SELECT SUM(OCTET_LENGTH(`" . $column_names[$c] .
+                             "`)) AS TOTAL_SIZE FROM `$tablename`";
+                    $res = $this->mysqli_query($sql_cmd, "get_blob_colum_size");
+                    $row = $res->fetch_row();
+                    $column_size = intval($row[0] / 1024);
+                    $total_blob_size_kB += $column_size;
+                }
+            }
+            $ret[$tablename] += $total_blob_size_kB;
+        }
+        return $ret;
+    }
+
+    /**
      * Get all versions of a history entry by splitting it into lines and combining those lines, which end
      * within a quoted entry.
      * 
@@ -1462,8 +1531,12 @@ class Tfyh_socket
      * 
      * @param String $record_history
      *            The record history String.
+     * @param String $restore_link
+     *            A link to be included as a restore button per version. Omit or Set to "" if not used.
+     *            Example "../pages/show_history.php?table=users&id=123". The respective version will be added
+     *            as "&restore_version=[number]".
      */
-    public function get_history_html (String $record_history)
+    public function get_history_html (String $record_history, String $restore_link = "")
     {
         // read the current history. Keep the version index. Create an empty array for insert
         if (is_null($record_history) || (strlen($record_history) == 0))
@@ -1479,20 +1552,27 @@ class Tfyh_socket
                 $author_record = $this->find_record_matched($this->toolbox->users->user_table_name, 
                         [$this->toolbox->users->user_id_field_name => $parts[1]
                         ]);
+                $version_int = intval($parts[0]);
                 $author_name = ($author_record !== false) ? $parts[1] . " (" .
                          $author_record[$this->toolbox->users->user_firstname_field_name] . " " .
                          $author_record[$this->toolbox->users->user_lastname_field_name] . ")" : (($parts[1] ==
                          "0") ? "efaCloud Server" : "unbekannt");
-                $version_html = "<p>" . date("d.m.Y H:i:s", $parts[2]) . " - <b>V" . $parts[0] .
-                         "</b> - Autor " . $author_name . "</p>";
+                $version_html = "<p>" . date("d.m.Y H:i:s", $parts[2]) . " - <b>V" . $version_int .
+                         "</b> - Autor " . $author_name;
+                if ((strlen($restore_link) > 0) && ($version_int != count($record_versions)))
+                    $version_html .= " - <a href='" . $restore_link . "&restore_version=" . $version_int .
+                             "'>Die Version V" . $parts[0] . " wieder herstellen.</a>";
+                $last_version = false;
+                $version_html .= "</p>";
                 $version_html .= "<table><tr><th>Feld</th><th>Wert</th></tr>\n";
                 $fields = $this->toolbox->read_csv_line($parts[3])["row"];
                 $record_version = [];
                 foreach ($fields as $field) {
                     $key_n_value = explode(":", $field, 2);
                     $record_version[$key_n_value[0]] = $key_n_value[1];
+                    $last_value = (isset($last_record_version[$key_n_value[0]])) ? $last_record_version[$key_n_value[0]] : false;
                     if (strlen($key_n_value[1]) > 0) {
-                        if (strcmp($key_n_value[1], $last_record_version[$key_n_value[0]]) != 0) {
+                        if (($last_value == false) || (strcmp($key_n_value[1], $last_value) != 0)) {
                             $lmod_string = (strcasecmp("LastModified", $key_n_value[0]) == 0) ? " [" .
                                      date("d.m.Y H:i:s", intval(substr($key_n_value[1], 0, 10))) . "]" : "";
                             $version_html .= "<tr><td>" . $key_n_value[0] . "</td><td>" .
@@ -1506,6 +1586,41 @@ class Tfyh_socket
             }
         }
         return $html;
+    }
+
+    /**
+     * Parse a history String and return the record history as array with per version an associative array
+     * "author", "Version", "time", "record_version".
+     * 
+     * @param String $record_history
+     *            The record history String.
+     * @return array the array of all record versions
+     */
+    public function get_history_array (String $record_history)
+    {
+        // read the current history. Keep the version index. Create an empty array for insert
+        if (is_null($record_history) || (strlen($record_history) == 0))
+            return "No version history available.";
+        
+        $record_versions = $this->get_versions($record_history);
+        $record_versions_array = [];
+        foreach ($record_versions as $record_version) {
+            // now interpret the version.
+            if (strlen($record_version) > 5) {
+                $parts = explode(";", $record_version, 4);
+                $fields = $this->toolbox->read_csv_line($parts[3])["row"];
+                $record_version = [];
+                foreach ($fields as $field) {
+                    $key_n_value = explode(":", $field, 2);
+                    $record_version[$key_n_value[0]] = $key_n_value[1];
+                }
+                $version_array = ["version" => intval($parts[0]),"author" => $parts[1],
+                        "time" => intval($parts[2]),"record_version" => $record_version
+                ];
+                $record_versions_array[] = $version_array;
+            }
+        }
+        return $record_versions_array;
     }
 
 /**

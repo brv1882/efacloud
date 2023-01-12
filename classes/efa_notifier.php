@@ -51,18 +51,21 @@ class Efa_notifier
                     else
                         $boat = ["Name" => "kein Boot angegeben"
                         ];
-                    if (isset($record["ReportedByPersonId"]))
+                    $full_name = "Person konnte nicht gefunden werden";
+                    if (isset($record["ReportedByPersonId"])) {
                         $person = $this->socket->find_record("efa2persons", "Id", 
                                 $record["ReportedByPersonId"]);
-                    else
-                        $person = ["LastName" => "Person konnte nicht gefunden werden"
-                        ];
+                        if ($person !== false) {
+                            include_once '../classes/efa_tables.php';
+                            $full_name = Efa_tables::virtual_full_name($person["FirstName"], 
+                                    $person["LastName"], $this->toolbox);
+                        }
+                    }
                     $mailto = $cfg["notify_damage_to"];
                     $subject = "[efa] Neuer Bootsschaden für das Boot " . $boat["Name"];
                     $message = "<p>Ein neuer Bootsschaden wurde in efa für das Boot " .
                              htmlentities(utf8_decode($boat["Name"])) . " durch " .
-                             htmlentities(utf8_decode($person["FirstName"] . " " . $person["LastName"])) .
-                             " eingetragen.</p>";
+                             htmlentities(utf8_decode($full_name)) . " eingetragen.</p>";
                 }
             } elseif (strcasecmp($tablename, "efa2messages") == 0) {
                 // prepare a notification message for a damage
@@ -70,7 +73,7 @@ class Efa_notifier
                          (strlen($cfg["notify_admin_message_to"]) > 4);
                 $is_to_admin = (strcasecmp($record["To"], "ADMIN") == 0);
                 if ($to_be_notified && $is_to_admin) {
-                    $mailto = $cfg["notify_damage_to"];
+                    $mailto = $cfg["notify_admin_message_to"];
                     $subject = "[efa] Neue Nachricht an ADMIN von " . $record["From"] . ", Betreff: " .
                              $record["Subject"];
                     $message = "<p>Eine neue Nachricht an den Admin liegt vor von " .

@@ -332,20 +332,20 @@ class Tfyh_logger
         $text = "Datum;";
         foreach ($activity_types as $activity_type => $activity_type_count)
             $text .= $activity_type . ";";
-        $text = substr($text, 0, strlen($text) - 1) . "\n";
+            $text = mb_substr($text, 0, mb_strlen($text) - 1) . "\n";
         // format activities data
         foreach ($activities as $activity_date => $activity_date_types) {
             $text .= $activity_date . ";";
             foreach ($activity_types as $activity_type => $activity_type_count)
                 $text .= ((isset($activity_date_types[$activity_type])) ? $activity_date_types[$activity_type] : "") .
                          ";";
-            $text = substr($text, 0, strlen($text) - 1) . "\n";
+                $text = mb_substr($text, 0, mb_strlen($text) - 1) . "\n";
         }
         // format activities sum
         $text .= "Summe " . $count_of_days . " Tage;";
         foreach ($activity_types as $activity_type => $activity_type_count)
             $text .= $activity_type_count . ";";
-        $text = substr($text, 0, strlen($text) - 1);
+            $text = mb_substr($text, 0, mb_strlen($text) - 1);
         return $text;
     }
 

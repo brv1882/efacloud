@@ -8,6 +8,17 @@ class Efa_tools
 {
 
     /**
+     * The list of tables in which records which are marked as deleted shall be finally purge. Note: they must
+     * be kept to inform all clients of their deletion. Once they are purged, a client will no more be
+     * notified of this deletion.
+     */
+    private static $tables_to_purge_deleted = ["efa2autoincrement","efa2boatdamages",
+            "efa2boatreservations","efa2boats","efa2boatstatus","efa2clubwork","efa2crews","efa2destinations",
+            "efa2fahrtenabzeichen","efa2groups","efa2logbook","efa2messages","efa2persons","efa2sessiongroups",
+            "efa2statistics","efa2status","efa2waters"
+    ];
+
+    /**
      * Tables with an efacloud record id field. Generated according to the selected data base layout.
      */
     public $ecrid_at;
@@ -28,11 +39,6 @@ class Efa_tools
     private $toolbox;
 
     /**
-     * The efa tables function set.
-     */
-    private $efa_tables;
-
-    /**
      * Log path for specific efa_tools logging
      */
     private $efa_tools_log_default = "../log/efa_tools.log";
@@ -40,24 +46,43 @@ class Efa_tools
     private $efa_tools_log;
 
     /**
-     * public Constructor.
+     * The version code for the data base layout. If $db_layout_version >= 2 this reflects the server's
+     * capability to use efaCLoud record management. Do not mix up with the API version.
      */
-    public function __construct (Efa_tables $efa_tables, Tfyh_toolbox $toolbox)
+    public $db_layout_version;
+
+    /**
+     * public Constructor.
+     * 
+     * @param Tfyh_toolbox $toolbox
+     *            application toolbox
+     * @param Tfyh_socket $socket
+     *            the socket to connect to the database
+     */
+    public function __construct (Tfyh_toolbox $toolbox, Tfyh_socket $socket)
     {
-        $this->efa_tables = $efa_tables;
-        $this->socket = $efa_tables->socket;
+        $this->socket = $socket;
         $this->toolbox = $toolbox;
         $this->efa_tools_log = $this->efa_tools_log_default;
+        include_once "../classes/efa_tables.php";
+        
+        $cfg_db = $toolbox->config->get_cfg_db();
+        $this->db_layout_version = intval($cfg_db["db_layout_version"]);
+        // minimum supported cofiguration version is db layout V3, the first with ecrid.
+        // If the configuration is lower, the DB audit will not appropriately run.
+        if ($this->db_layout_version < 4)
+            $this->db_layout_version = 4;
         
         include_once "../classes/efa_db_layout.php";
         $this->ecrid_at = [];
         $this->ecrhis_at = [];
-        foreach (Efa_db_layout::db_layout($efa_tables->db_layout_version) as $tablename => $columns) {
+        foreach (Efa_db_layout::db_layout($this->db_layout_version) as $tablename => $columns) {
             if (array_key_exists("ecrid", $columns))
                 $this->ecrid_at[$tablename] = true;
             if (array_key_exists("ecrhis", $columns))
                 $this->ecrhis_at[$tablename] = true;
         }
+        include_once "../classes/efa_archive.php"; // Used in add_FirstLastName and add_AllCrewIds
     }
 
     /**
@@ -111,14 +136,12 @@ class Efa_tools
         // TODO: obsolete. Remove when versions 2.3.0 become obsolete. For 2.3.1_07 ff. the call goes to
         // upgrade_efa_tables() instead during upgrade
         // procedure.
-        /*
-         * adjust the data base layout. This is called in this section, because the update trigger is already
-         * existing in the upgrade procedure.
-         */
+        /* adjust the data base layout. This is called in this section, because the update trigger is already
+         * existing in the upgrade procedure. */
         if (! $callerIsThis &&
-                 ($this->efa_tables->db_layout_version < $this->efa_tables->db_layout_version_target))
+                 ($this->efa_tables->db_layout_version < Efa_db_layout::$db_layout_version_target))
             $this->update_database_layout($_SESSION["User"][$this->toolbox->users->user_id_field_name], 
-                    $this->efa_tables->db_layout_version_target, false);
+                    Efa_db_layout::$db_layout_version_target, false);
     }
 
     /**
@@ -130,11 +153,13 @@ class Efa_tools
     public function upgrade_efa_tables (bool $forced = false)
     {
         // adjust the data base layout.
-        if ($forced || ($this->efa_tables->db_layout_version < $this->efa_tables->db_layout_version_target)) {
-            $this->update_database_layout($_SESSION["User"][$this->toolbox->users->user_id_field_name], 
-                    $this->efa_tables->db_layout_version_target, false);
+        if ($forced || ($this->db_layout_version < Efa_db_layout::$db_layout_version_target)) {
+            $upgrade_success = $this->update_database_layout(
+                    $_SESSION["User"][$this->toolbox->users->user_id_field_name], 
+                    Efa_db_layout::$db_layout_version_target, false);
             $this->adjust_tfyh_history_settings(true);
         }
+        return $upgrade_success;
     }
 
     /* --------------------------------------------------------------------------------------- */
@@ -183,8 +208,8 @@ class Efa_tools
     private function set_db_layout_version (int $db_layout_version)
     {
         // adapt 'db_layout' configuration parameter within db configuration file, cf. install.php
-        $cfg = $this->toolbox->config->get_cfg();
-        $cfg["db_layout"] = $db_layout_version;
+        $cfg = $this->toolbox->config->get_cfg_db();
+        $cfg["db_layout_version"] = $db_layout_version;
         $cfg["db_up"] = Tfyh_toolbox::swap_lchars($cfg["db_up"]);
         $cfgStr = serialize($cfg);
         $cfgStrBase64 = base64_encode($cfgStr);
@@ -194,18 +219,27 @@ class Efa_tools
     /**
      * Execute and log an $sql_cmd.
      * 
-     * @param unknown $sql_cmd            
+     * @param String $appUserID
+     *            the user issueing the command
+     * @param String $sql_cmd
+     *            the command issued
+     * @param String $log_message
+     *            a message to include in the log
+     * @return boolean the actiities success
      */
     private function execute_and_log (String $appUserID, String $sql_cmd, String $log_message)
     {
         $success = $this->socket->query($sql_cmd);
         if ($success === false) {
-            $fail_message = "Failed data base statement for User ' . $appUserID . ': " . $log_message .
+            $fail_message = "Failed data base statement for User '" . $appUserID . "': " . $log_message .
                      "\n   Error: " . $this->socket->get_last_mysqli_error() . " in " . $sql_cmd;
-            $this->toolbox->logger->log(2, $appUserID, $fail_message);
+            file_put_contents($this->efa_tools_log, date("Y-m-d H:i:s") . ": $fail_message.\n", FILE_APPEND);
+            return false;
         } else {
-            $success_message = "Executed data base statement for User ' . $appUserID . ': " . $log_message;
-            $this->toolbox->logger->log(0, $appUserID, $success_message);
+            $success_message = "Executed data base statement for User '" . $appUserID . "': " . $log_message;
+            file_put_contents($this->efa_tools_log, date("Y-m-d H:i:s") . ": $success_message.\n", 
+                    FILE_APPEND);
+            return true;
         }
     }
 
@@ -231,7 +265,7 @@ class Efa_tools
         if ($admin_record === false)
             $admin_record = $_SESSION["User"];
         // now reset all tables
-        $db_layout_version = $this->efa_tables->db_layout_version_target;
+        $db_layout_version = Efa_db_layout::$db_layout_version_target;
         include_once '../classes/efa_db_layout.php';
         $this->toolbox->logger->log(0, $appUserID, date("Y-m-d H:i:s") . ": Starting init_efa_data_base().");
         $tables_of_layout = Efa_db_layout::db_layout($db_layout_version);
@@ -244,11 +278,15 @@ class Efa_tools
                 $this->execute_and_log($appUserID, $sql_cmd, $log_message);
                 $log_message = "Create table `" . $tablename .
                          "` with all columns according to the current layout version " .
-                         $this->efa_tables->db_layout_version_target;
+                         Efa_db_layout::$db_layout_version_target;
                 $result .= $log_message . "<br>";
                 $sql_cmds = Efa_db_layout::build_sql_add_table_commands($db_layout_version, $tablename);
+                $create_table_success = true;
                 foreach ($sql_cmds as $sql_cmd)
-                    $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                    $create_table_success = $create_table_success &&
+                             $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                if ($create_table_success === false)
+                    $result .= "Failed to create table, see efa_tools.log for details.<br>";
             }
         }
         if ($init_efaCloud) {
@@ -261,7 +299,7 @@ class Efa_tools
             $this->toolbox->logger->log(0, $appUserID, $log_message);
             $result .= $log_message;
         }
-        $this->set_db_layout_version($this->efa_tables->db_layout_version_target);
+        $this->set_db_layout_version(Efa_db_layout::$db_layout_version_target);
         return $result;
     }
 
@@ -275,7 +313,9 @@ class Efa_tools
      * @param bool $verify_only
      *            If this flag is true, nothing will be done, but just checked whether something would be
      *            done. Only exception: default value setting is not checked.
-     * @return true, for $verify_only set and a deviation from the layout false
+     * @return boolean false is returned for 1. for $verify_only == true and a deviation from the layout or a
+     *         previous verification happened less than 10 minutes ago, 2. for $verify_only == false and
+     *         failure to correct the data base. Else true is returned.
      */
     public function update_database_layout (String $appUserID, int $use_layout_version, bool $verify_only)
     {
@@ -306,6 +346,7 @@ class Efa_tools
         }
         
         // now adjust all tables
+        $correction_success = true;
         include_once "../classes/efa_db_layout.php";
         $table_names_existing = $this->socket->get_table_names();
         $lower_case_tablenames = true;
@@ -333,7 +374,11 @@ class Efa_tools
                          "` with all columns according to the current layout.";
                 $sql_cmds = Efa_db_layout::build_sql_add_table_commands($use_layout_version, $tablename);
                 foreach ($sql_cmds as $sql_cmd)
-                    $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                    // this will abort execution after first failure.
+                    $correction_success = $correction_success &&
+                             $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                if ($correction_success === false)
+                    return false;
             }
         }
         // and drop the obsolete ones
@@ -352,7 +397,9 @@ class Efa_tools
                 }
                 $sql_cmd = "DROP TABLE `" . $tablename . "`";
                 $log_message = "Drop table `" . $tablename . "`.";
-                $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                $correction_success = $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                if ($correction_success === false)
+                    return false;
             }
         }
         
@@ -361,21 +408,10 @@ class Efa_tools
             $this->set_db_layout_version($use_layout_version);
             $this->toolbox->logger->log(0, $appUserID, 
                     date("Y-m-d H:i:s") . ": database_layout upgraded to " . $use_layout_version);
-            file_put_contents("../log/efa_tools_db_verified.time", strval(time()));
+            file_put_contents("../log/efa_tools_db_upgrade_V$use_layout_version.time", strval(time()));
         } else {
-            $db_layout_verified_times = 0;
-            if (file_exists("../config/db_layout_verified_times"))
-                $db_layout_verified_times = intval(file_get_contents("../config/db_layout_verified_times"));
-            if ($db_layout_verified_times < 50) {
-                $db_layout_verified_times ++;
-                file_put_contents("../config/db_layout_verified_times", $db_layout_verified_times);
-                $this->toolbox->logger->log(0, $appUserID, 
-                        date("Y-m-d H:i:s") .
-                                 ": Verified database_layout $db_layout_verified_times of 50 times successfully.");
-            }
+            file_put_contents("../log/efa_tools_db_verified_V$use_layout_version.time", strval(time()));
         }
-        
-        // if the $verify_only flag is set and this point reached, all is fine
         return true;
     }
 
@@ -390,7 +426,9 @@ class Efa_tools
      * @param bool $verify_only
      *            If this flag is true, nothing will be done, but just checked whether something would be
      *            done. Only exception: default value setting is not checked.
-     * @return bool : true. For $verify_only set AND a deviation from the layout: false
+     * @return boolean false is returned for 1. for $verify_only == true and a deviation from the layout or a
+     *         previous verification happened less than 10 minutes ago, 2. for $verify_only == false and
+     *         failure to correct the data base. Else true is returned.
      */
     private function update_table_layout (String $appUserID, int $use_layout_version, String $tablename, 
             bool $verify_only)
@@ -439,10 +477,9 @@ class Efa_tools
                             $cname, Efa_db_layout::$sql_column_null_to_zero_adjustment);
                     $log_message = "Set Default for `" . $tablename . "`.`" . $cname . "` from NULL to " .
                              $default;
-                    $this->execute_and_log($appUserID, $sql_cmd, $log_message);
-                    file_put_contents($this->efa_tools_log, 
-                            date("Y-m-d H:i:s") . ": Changed default for $cname in " . $tablename .
-                                     " to current value.\n", FILE_APPEND);
+                    $success = $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                    if ($success === false)
+                        return false;
                 }
                 // now change the column (change all, whatever mismatch was detected)
                 if (! $verify_only) {
@@ -450,10 +487,9 @@ class Efa_tools
                     $sql_cmd = Efa_db_layout::build_sql_column_command($use_layout_version, $tablename, 
                             $cname, $activity_template);
                     $log_message = "Change column `" . $tablename . "`.`" . $cname . "` to current definition.";
-                    $this->execute_and_log($appUserID, $sql_cmd, $log_message);
-                    file_put_contents($this->efa_tools_log, 
-                            date("Y-m-d H:i:s") . ": Changed $cname in " . $tablename .
-                                     " to current definition.\n", FILE_APPEND);
+                    $success = $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                    if ($success === false)
+                        return false;
                 } else {
                     // or check type and size, if just the verification shall happen
                     $def_parts = explode(";", $cdefinition);
@@ -485,9 +521,9 @@ class Efa_tools
                 $log_message = "Add column `" . $tablename . "`.`" . $cname . "` with current definition.";
                 $sql_cmd = Efa_db_layout::build_sql_column_command($use_layout_version, $tablename, $cname, 
                         $activity_template);
-                $this->execute_and_log($appUserID, $sql_cmd, $log_message);
-                file_put_contents($this->efa_tools_log, 
-                        date("Y-m-d H:i:s") . ": Adding missing $cname in " . $tablename . ".\n", FILE_APPEND);
+                $success = $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                if ($success === false)
+                    return false;
             }
             
             // add a unique quality, if not yet existing
@@ -497,10 +533,9 @@ class Efa_tools
                     $sql_cmd = "ALTER TABLE `" . $tablename . "` ADD UNIQUE(`" . $cname . "`); ";
                     $log_message = "Add unique property to `" . $tablename . "`.`" . $cname . "`.";
                     if (! $verify_only) {
-                        $this->execute_and_log($appUserID, $sql_cmd, $log_message);
-                        file_put_contents($this->efa_tools_log, 
-                                date("Y-m-d H:i:s") . ": Adding missing unique property for $cname in " .
-                                         $tablename . ".\n", FILE_APPEND);
+                        $success = $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                        if ($success === false)
+                            return false;
                     }
                 }
             }
@@ -513,10 +548,9 @@ class Efa_tools
                              "` INT UNSIGNED NOT NULL AUTO_INCREMENT";
                     $log_message = "Add auto increment property to `" . $tablename . "`.`" . $cname . "`.";
                     if (! $verify_only) {
-                        $this->execute_and_log($appUserID, $sql_cmd, $log_message);
-                        file_put_contents($this->efa_tools_log, 
-                                date("Y-m-d H:i:s") . ": Adding missing autoincrement property for $cname in " .
-                                         $tablename . ".\n", FILE_APPEND);
+                        $success = $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                        if ($success === false)
+                            return false;
                     }
                 }
             }
@@ -539,7 +573,9 @@ class Efa_tools
                 // e.g. ALTER TABLE `efaCloudPartners` DROP `UseEcrm`;
                 $sql_cmd = "ALTER TABLE `" . $tablename . "` DROP `" . $cname_existing . "`;";
                 $log_message = "Drop obsolete column `" . $tablename . "`.`" . $cname_existing . "`.";
-                $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                $success = $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                if ($success === false)
+                    return false;
             }
         }
         
@@ -556,7 +592,9 @@ class Efa_tools
                 // ALTER TABLE `efa2autoincrement` DROP INDEX `Sequence_7`;
                 $sql_cmd = "ALTER TABLE `" . $tablename . "` DROP INDEX `" . $iname_existing . "`;";
                 $log_message = "Drop obsolete index `" . $tablename . "`.`" . $iname_existing . "`.";
-                $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                $success = $this->execute_and_log($appUserID, $sql_cmd, $log_message);
+                if ($success === false)
+                    return false;
             }
         }
         
@@ -572,56 +610,78 @@ class Efa_tools
     }
 
     /**
+     * Add a chunk of ecrids for either NULL or empty ecrids.
+     * 
+     * @param String $tablename
+     *            the table to look for not empty ecrids
+     * @param String $condition
+     *            the condition to meet ("=" or "NULL")
+     * @param int $chunk_size
+     *            the size of the chunks to use
+     * @param int $max
+     *            maximum number of ecrids to be added.
+     * @return number the number of ecrids added
+     */
+    private function add_ecrids_chunks (String $tablename, String $condition, int $chunk_size, int $count, 
+            int $max)
+    {
+        $i = $count;
+        $start_row = 0;
+        $records_wo_ecrid = $this->socket->find_records_sorted_matched($tablename, 
+                ["ecrid" => ""
+                ], $chunk_size, $condition, "", true, $start_row);
+        while (($records_wo_ecrid !== false) && (count($records_wo_ecrid) > 0)) {
+            // create and add $count efaCloud record Ids
+            $ecrids = $this->efa_tables->generate_ecrids($chunk_size);
+            $e = 0;
+            file_put_contents($this->efa_tools_log, 
+                    date("Y-m-d H:i:s") . ": Adding " . count($records_wo_ecrid) . "ecrids for '" . $tablename .
+                             "'.\n", FILE_APPEND);
+            foreach ($records_wo_ecrid as $record_wo_ecrid) {
+                $data_key = Efa_tables::get_data_key($tablename, $record_wo_ecrid);
+                // create SQL command and change log entry.
+                $sql_cmd = "UPDATE `" . $tablename . "` SET `ecrid` = '" . $ecrids[$e] . "' WHERE ";
+                $wherekeyis = "";
+                foreach ($data_key as $key => $value)
+                    $wherekeyis .= "`" . $tablename . "`.`" . $key . "` = '" . strval($value) . "' AND ";
+                $sql_cmd .= mb_substr($wherekeyis, 0, mb_strlen($wherekeyis) - 5);
+                $result = $this->socket->query($sql_cmd);
+                $i ++;
+                $e ++;
+                if ($i >= $max)
+                    return $i;
+            }
+            $start_row += $chunk_size;
+            $records_wo_ecrid = $this->socket->find_records_sorted_matched($tablename, 
+                    ["ecrid" => ""
+                    ], $chunk_size, $condition, "", true, $start_row);
+        }
+        return $i;
+    }
+
+    /**
      * Find data records without ecrids and add the ecrids to them.
      * 
-     * @param int $count
+     * @param int $max
      *            maximum number of ecrids to be added.
      * @return int count of ecrids added.
      */
-    public function add_ecrids (int $count)
+    public function add_ecrids (int $max)
     {
         // include layout definition
         include_once '../classes/efa_db_layout.php';
-        $efa_db_layout = Efa_db_layout::db_layout($this->efa_tables->db_layout_version);
+        $efa_db_layout = Efa_db_layout::db_layout($this->db_layout_version);
         
-        // create and add $count efaCloud record Ids
-        $ecrids = $this->efa_tables->generate_ecrids($count);
-        $i = 0;
-        
+        $count = 0;
         foreach ($efa_db_layout as $tablename => $columns) {
             $column_names = $this->socket->get_column_names($tablename);
             // add only if an ecrid field is within the table in both the real one and the layout definition.
-            if (($this->ecrid_at[$tablename] === true) && in_array("ecrid", $column_names)) {
-                // add only using chunks of 100 to avoid memory overflow.
-                $records_wo_ecrid = $this->socket->find_records_sorted_matched($tablename, 
-                        ["ecrid" => ""
-                        ], 100, "NULL", "", true);
-                while (($records_wo_ecrid !== false) && (count($records_wo_ecrid) > 0)) {
-                    file_put_contents($this->efa_tools_log, 
-                            date("Y-m-d H:i:s") . ": Adding " . count($records_wo_ecrid) . "ecrids for '" .
-                                     $tablename . "'.\n", FILE_APPEND);
-                    foreach ($records_wo_ecrid as $record_wo_ecrid) {
-                        $data_key = $this->efa_tables->get_data_key($tablename, $record_wo_ecrid);
-                        // create SQL command and change log entry.
-                        $sql_cmd = "UPDATE `" . $tablename . "` SET `ecrid` = '" . $ecrids[$i] . "' WHERE ";
-                        $wherekeyis = "";
-                        foreach ($data_key as $key => $value)
-                            $wherekeyis .= "`" . $tablename . "`.`" . $key . "` = '" . strval($value) .
-                                     "' AND ";
-                        $sql_cmd .= substr($wherekeyis, 0, strlen($wherekeyis) - 5);
-                        $result = $this->socket->query($sql_cmd);
-                        $i ++;
-                        if ($i >= $count)
-                            return $i;
-                    }
-                    $records_wo_ecrid = $this->socket->find_records_sorted_matched($tablename, 
-                            ["ecrid" => ""
-                            ], 100, "NULL", "", true);
-                }
+            if (in_array("ecrid", $column_names) && ($this->ecrid_at[$tablename] === true)) {
+                $count = $this->add_ecrids_chunks($tablename, "NULL", 100, $count, $max);
+                $count = $this->add_ecrids_chunks($tablename, "=", 100, $count, $max);
             }
         }
-        
-        return $i;
+        return $count;
     }
 
     /* --------------------------------------------------------------------------------------- */
@@ -633,6 +693,7 @@ class Efa_tools
      */
     public function create_app_status_summary (Tfyh_toolbox $toolbox, Tfyh_socket $socket)
     {
+        
         // Check logbooks
         $total_record_count = 0;
         $html = "<h4>Fahrtenbücher</h4>\n";
@@ -640,6 +701,17 @@ class Efa_tools
         $logbooks = $socket->count_values("efa2logbook", "LogbookName");
         foreach ($logbooks as $logbook_name => $entry_count) {
             $html .= "<tr><td>" . $logbook_name . "</td><td>" . $entry_count . "</td></tr>\n";
+            $total_record_count += $entry_count;
+        }
+        $html .= "<tr><td>Summe</td><td>" . $total_record_count . "</td></tr></table>\n";
+        
+        // Check clubwork books
+        $total_record_count = 0;
+        $html = "<h4>Vereinsarbeitsbücher</h4>\n";
+        $html .= "<table><tr><th>Vereinsarbeitsbuch</th><th>Anzahl Vereinsarbeit</th></tr>\n";
+        $clubworkbooks = $socket->count_values("efa2clubworkbook", "ClubworkbookName");
+        foreach ($clubworkbooks as $clubworkbook_name => $entry_count) {
+            $html .= "<tr><td>" . $clubworkbook_name . "</td><td>" . $entry_count . "</td></tr>\n";
             $total_record_count += $entry_count;
         }
         $html .= "<tr><td>Summe</td><td>" . $total_record_count . "</td></tr></table>\n";
@@ -660,11 +732,12 @@ class Efa_tools
         $html .= $toolbox->users->get_all_accesses($socket, false);
         
         // Check accessses logged.
-        $html .= "<h4>Zugriffe</h4>\n";
+        $days_to_log = 14;
+        $html .= "<h4>Zugriffe letzte " . $days_to_log . " Tage</h4>\n";
         include_once '../classes/tfyh_statistics.php';
         $tfyh_statistics = new Tfyh_statistics();
         file_put_contents("../log/efacloud_server_statistics.csv", 
-                $tfyh_statistics->pivot_timestamps(86400, 14));
+                $tfyh_statistics->pivot_timestamps(86400, $days_to_log));
         $html .= "<table><tr><th>clientID</th><th>clientName</th><th>Anzahl Zugriffe</th></tr>\n";
         $timestamps_count_all = 0;
         foreach ($tfyh_statistics->timestamps_count as $clientID => $timestamps_count) {
@@ -684,15 +757,16 @@ class Efa_tools
         $backup_files_size = 0;
         $backup_files_count = 0;
         $backup_files_youngest = 0;
-        foreach ($backup_files as $backup_file) {
-            if (strcasecmp(substr($backup_file, 0, 1), ".") != 0) {
-                $backup_files_size += filesize($backup_dir . "/" . $backup_file);
-                $lastmodified = filectime($backup_dir . "/" . $backup_file);
-                if ($lastmodified > $backup_files_youngest)
-                    $backup_files_youngest = $lastmodified;
-                $backup_files_count ++;
+        if ($backup_files !== false)
+            foreach ($backup_files as $backup_file) {
+                if (strcasecmp(substr($backup_file, 0, 1), ".") != 0) {
+                    $backup_files_size += filesize($backup_dir . "/" . $backup_file);
+                    $lastmodified = filectime($backup_dir . "/" . $backup_file);
+                    if ($lastmodified > $backup_files_youngest)
+                        $backup_files_youngest = $lastmodified;
+                    $backup_files_count ++;
+                }
             }
-        }
         $html .= "<p>" . $backup_files_count . " Backup-Archive mit in Summe " .
                  (intval($backup_files_size / 1024 / 102) / 10) . " MByte. \n";
         $html .= "Jüngstes Backup von " . date("Y-m-d H:i:s", $backup_files_youngest) . ".</p>\n";
@@ -705,108 +779,179 @@ class Efa_tools
     /* --------------------------------------------------------------------------------------- */
     
     /**
-     * Records sometimes are not completley deleted. Check those and remove remaining data. Only affects
-     * efa-tables, not efaCloud tables.
-     * 
-     * @param int $appUserID
-     *            the ID of the verified client which requests the cleansing
+     * Purge all trashed records, if too old.
      */
-    public function cleanse_deleted (int $appUserID)
+    public function purge_trashed ()
     {
-        foreach ($this->efa_tables->efa2tablenames as $tablename) {
-            $to_be_cleansed = $this->socket->find_records_matched($tablename, 
-                    ["LastModification" => "delete"
-                    ], 1000);
-            if ($to_be_cleansed !== false) {
-                foreach ($to_be_cleansed as $tbc_record) {
-                    $clean_record = $this->efa_tables->clear_record_for_delete($tablename, $tbc_record);
-                    if ($clean_record !== false) {
-                        $success = $this->socket->update_record_matched($appUserID, $tablename, 
-                                ["ecrid" => $tbc_record["ecrid"]
-                                ], $clean_record);
-                        if (strlen($success) == 0) {
-                            $fields_changed = "";
-                            foreach ($tbc_record as $key => $value)
-                                if ($clean_record[$key] !== $value)
-                                    $fields_changed .= $key . ": " . $clean_record[$key] . "; ";
-                            $notification = [];
-                            // ID is automatically generated by MySQL data base
-                            $notification["Author"] = $appUserID;
-                            // Time is automatically generated by MySQL data base
-                            $notification["Reason"] = "cleansed remaining values in deleted record: " .
-                                     $fields_changed;
-                            $notification["ChangedTable"] = $tablename;
-                            $notification["ChangedRecord"] = json_encode($tbc_record);
-                            $success = $this->socket->insert_into($appUserID, "efaCloudCleansed", 
-                                    $notification);
+        $cfg = $this->toolbox->config->get_cfg();
+        // Default is maximum count of days, ~68 years.
+        $purgeDeletedAgeDays = (isset($cfg["PurgeDeletedAgeDays"]) && (strlen($cfg["PurgeDeletedAgeDays"]) > 0)) ? intval(
+                $cfg["PurgeDeletedAgeDays"]) : self::$forever_days;
+        $tablename = "efaCloudTrash";
+        if ($purgeDeletedAgeDays > 0) {
+            $sql_cmd = "DELETE FROM `$tablename` WHERE (DATEDIFF(CURRENT_DATE,`TrashedAt`) > " .
+                     $purgeDeletedAgeDays . ")";
+            // === test code
+            // file_put_contents("../log/tmp", $tablename . ": Would execute purge: " . $sql_cmd . "\n",
+            // FILE_APPEND);
+            // === test code
+            $this->socket->query($sql_cmd);
+            $affected_rows = $this->socket->affected_rows();
+            $trashed_cnt = $this->socket->count_records($tablename);
+        }
+        if (($affected_rows > 0) || ($trashed_cnt > 0))
+            $info = "purged/left: " . $affected_rows . "/" . $trashed_cnt;
+        else
+            $info = "no trashed records to purge";
+        return $info;
+    }
+
+    /**
+     * Purge all deleted records of all tables, if too old.
+     */
+    public function purge_outdated_deleted ()
+    {
+        $cfg = $this->toolbox->config->get_cfg();
+        // Default is maximum count of days, ~68 years.
+        $purgeDeletedAgeDays = (isset($cfg["PurgeDeletedAgeDays"]) && (strlen($cfg["PurgeDeletedAgeDays"]) > 0)) ? intval(
+                $cfg["PurgeDeletedAgeDays"]) : self::$forever_days;
+        $info = "";
+        if ($purgeDeletedAgeDays > 0)
+            foreach (self::$tables_to_purge_deleted as $tablename) {
+                $deleted_cnt = $this->socket->count_records($tablename, 
+                        ["LastModification" => "delete"
+                        ], "=");
+                $sql_cmd = "DELETE FROM `" . $tablename .
+                         "` WHERE (`LastModification` = 'delete') AND (`LastModified` < ((UNIX_TIMESTAMP() - " .
+                         $purgeDeletedAgeDays . " * 86400)) * 1000)";
+                // === test code
+                // file_put_contents("../log/tmp", $tablename . ": Would execute purge: " . $sql_cmd . "\n",
+                // FILE_APPEND);
+                // === test code
+                $this->socket->query($sql_cmd);
+                $affected_rows = $this->socket->affected_rows();
+                if (($affected_rows > 0) || ($deleted_cnt > 0))
+                    $info .= $tablename . ": " . $affected_rows . "/" . $deleted_cnt . ", ";
+            }
+        if (strlen($info) == 0)
+            $info = "no deleted records were found";
+        else
+            $info = mb_substr($info, 0, mb_strlen($info) - 2);
+        return $info;
+    }
+
+    /**
+     * Purge all corrupt data. No deletion, no deletion notification. Purges only those, which are empty.
+     * Compare Efa_audit::data_integrity_audit().
+     */
+    public function purge_corrupt ()
+    {
+        include_once '../classes/efa_record.php';
+        $efa_record = new Efa_record($this->toolbox, $this->socket);
+        $purge_count = 0;
+        $list_definitions = new Tfyh_list("../config/lists/efaAuditCorruptData", 0, "", $this->socket, 
+                $this->toolbox);
+        $list_definitions = $list_definitions->get_all_list_definitions();
+        $purged_records_cnt_all = 0;
+        $checked_records_cnt_all = 0;
+        for ($list_index = 0; $list_index < count($list_definitions); $list_index ++) {
+            $purged_records_cnt = 0;
+            $checked_records_cnt = 0;
+            $list_id = intval($list_definitions[$list_index]["id"]);
+            $lists["corrupt"][$list_id] = new Tfyh_list("../config/lists/efaAuditCorruptData", $list_id, "", 
+                    $this->socket, $this->toolbox);
+            $table_name = $lists["corrupt"][$list_id]->get_table_name();
+            $ecrid_index = $lists["corrupt"][$list_id]->get_field_index("ecrid");
+            $lastModification_index = $lists["corrupt"][$list_id]->get_field_index("LastModification");
+            $lastModified_index = $lists["corrupt"][$list_id]->get_field_index("LastModified");
+            $changeCount_index = $lists["corrupt"][$list_id]->get_field_index("ChangeCount");
+            $to_be_purged = false;
+            foreach ($lists["corrupt"][$list_id]->get_rows() as $row) {
+                $checked_records_cnt ++;
+                // missing last modification
+                $to_be_purged = $to_be_purged || ! isset($row[$lastModification_index]) ||
+                         is_null($row[$lastModification_index]) || (strlen($row[$lastModification_index]) == 0);
+                // missing or invalid last modified
+                $to_be_purged = $to_be_purged || ! isset($row[$lastModified_index]) ||
+                         is_null($row[$lastModified_index]) || (strlen($row[$lastModified_index]) < 2);
+                // missing or invalid change count
+                $to_be_purged = $to_be_purged || ! isset($row[$changeCount_index]) ||
+                         is_null($row[$changeCount_index]) || (strlen($row[$changeCount_index]) == 0);
+                // do not purge records without ecrid. Deletion may hit the wrong one.
+                $to_be_purged = $to_be_purged && isset($row[$ecrid_index]) && (strlen($row[$ecrid_index]) > 0);
+                if ($to_be_purged) {
+                    // get full record
+                    $full_record = $this->socket->find_record($table_name, "ecrid", $row[$ecrid_index]);
+                    // do not purge records without conten automatically.
+                    if (Efa_record::is_content_empty($table_name, $full_record)) {
+                        $delete_result = $this->socket->delete_record_matched(
+                                $_SESSION["User"][$this->toolbox->users->user_id_field_name], $table_name, 
+                                ["ecrid" => $row[$ecrid_index]
+                                ]);
+                        if (strlen($delete_result) == 0) {
+                            $purged_records_cnt ++;
+                        }
+                    }
+                }
+            }
+            $purged_records_cnt_all += $purged_records_cnt;
+            $checked_records_cnt_all += $checked_records_cnt;
+        }
+        return "$purged_records_cnt_all/$checked_records_cnt_all";
+    }
+
+    /**
+     * Add a last modification field for records missing this entry. Check the last entry in the history to
+     * identify, what was the value prior to deletion of this entry. And, if there is no history, check
+     * whether the record is more or less empty, than use delete. Iterate through all efa tables, but do not
+     * change more than 50 per records table.
+     */
+    public function add_last_modifications ()
+    {
+        $added_lms = 0;
+        include_once "../classes/efa_record.php";
+        $efa_record = new Efa_record($this->toolbox, $this->socket);
+        foreach (Efa_tables::$server_gen_fields as $tablename => $server_gen_fields) {
+            if (in_array("LastModification", $server_gen_fields)) {
+                $missing_last_modified = $this->socket->find_records_matched($tablename, 
+                        ["LastModification" => ""
+                        ], 50);
+                // LastModification may also be null
+                if ($missing_last_modified === false)
+                    $missing_last_modified = $this->socket->find_records_sorted_matched($tablename, 
+                            ["LastModification" => ""
+                            ], 50, "NULL", "", true);
+                if ($missing_last_modified !== false) {
+                    foreach ($missing_last_modified as $record) {
+                        $ecrid = $record["ecrid"];
+                        $last_modification = "";
+                        if (isset($record["ecrhis"]) && (strlen($record["ecrhis"]) > 0)) {
+                            $history_versions = $this->socket->get_history_array($record["ecrhis"]);
+                            foreach ($history_versions as $history_version)
+                                if (isset($history_version["record_version"]) &&
+                                         isset($history_version["record_version"]["LastModification"]) &&
+                                         (strlen($history_version["record_version"]["LastModification"]) > 0)) {
+                                    $last_modification = $history_version["record_version"]["LastModification"];
+                                }
+                        } elseif (Efa_record::is_content_empty($tablename, $record)) {
+                            $last_modification = "delete";
+                        }
+                        $is_delete = (strcasecmp($last_modification, "delete") == 0);
+                        if ((strlen($last_modification) > 0) && isset($record["ecrid"])) {
+                            $record = Efa_tables::register_modification($record, time(), 
+                                    $record["ChangeCount"], $last_modification);
+                            if (isset($record["ecrhis"]) && $is_delete)
+                                $record["ecrhis"] = "REMOVE!";
+                            $update_result = $this->socket->update_record_matched(
+                                    $_SESSION["User"][$this->toolbox->users->user_id_field_name], $tablename, 
+                                    ["ecrid" => $record["ecrid"]
+                                    ], $record);
+                            $added_lms ++;
                         }
                     }
                 }
             }
         }
-    }
-
-    /**
-     * Remove the cleansing log records older than $max_age_days. Usually 30 days wast papter basket time.
-     * 
-     * @param int $max_age_days            
-     */
-    public function remove_old_cleansed_records (int $max_age_days)
-    {
-        $sql_cmd = "DELETE FROM `efaCloudCleansed` WHERE DATEDIFF(NOW(), `Time`) > " . $max_age_days;
-        $this->socket->query($sql_cmd);
-    }
-
-    /**
-     * Records sometimes are not completley deleted. Check those and remove remaining data. Per table modify
-     * not more than 10 records for speed reasons.
-     * 
-     * @param int $appUserID
-     *            the ID of the verified client which requests the addition (or the cron job execution)
-     */
-    public function add_AllCrewIds (int $appUserID)
-    {
-        $tablename = "efa2logbook";
-        $matching = ["AllCrewIds" => ""
-        ];
-        $to_be_modified = $this->socket->find_records_sorted_matched($tablename, $matching, 50, "NULL", 
-                "LastModified", true);
-        if ($to_be_modified === false)
-            return;
-        foreach ($to_be_modified as $tbm_record) {
-            $allCrewIds = $this->efa_tables->create_AllCrewIds_field($tbm_record);
-            $tbm_record["AllCrewIds"] = $allCrewIds;
-            // success is explicitly ignored
-            $data_key = $this->efa_tables->get_data_key($tablename, $tbm_record);
-            $success = $this->socket->update_record_matched($appUserID, $tablename, $data_key, $tbm_record);
-        }
-    }
-
-    /**
-     * Records sometimes are not completley deleted. Check those and remove remaining data. Per table modify
-     * not more than 10 records for speed reasons.
-     * 
-     * @param int $appUserID
-     *            the ID of the verified client which requests the addition (or the cron job execution)
-     */
-    public function add_FirstLastName (int $appUserID)
-    {
-        $tablename = "efa2persons";
-        $matching = ["FirstLastName" => ""
-        ];
-        $to_be_modified = $this->socket->find_records_sorted_matched($tablename, $matching, 50, "NULL", 
-                "LastModified", true);
-        // no record with NULL entry, try empty ones:
-        if ($to_be_modified === false)
-            $to_be_modified = $this->socket->find_records_sorted_matched($tablename, $matching, 50, "=", 
-                    "LastModified", true);
-        if ($to_be_modified === false)
-            foreach ($to_be_modified as $tbm_record) {
-                $tbm_record["FirstLastName"] = $tbm_record["FirstName"] . " " . $tbm_record["LastName"];
-                // success is explicitly ignored
-                $data_key = $this->efa_tables->get_data_key($tablename, $tbm_record);
-                $success = $this->socket->update_record_matched($appUserID, $tablename, $data_key, 
-                        $tbm_record);
-            }
+        return $added_lms;
     }
 }

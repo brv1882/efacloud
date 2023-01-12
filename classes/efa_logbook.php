@@ -17,20 +17,25 @@ class Efa_logbook
     private $socket;
 
     /**
-     * Efa data edit class to resolve the UUIDs.
+     * efa uuid resolving utility class.
      */
-    private $efa_dataedit;
+    private $efa_uuids;
+
+    /**
+     * Efa_tables utility class.
+     */
+    private $efa_config;
+    
+    /**
+     * an array with all logbook periods known from the respective client configuration.
+     */
+    private $logbook_periods;
 
     /**
      * The maximum number of recipients to get the personal logbook. This limit is needed to avoid memory
      * overflow.
      */
     private $max_no_recipients_personal_logbook = 1000;
-
-    /**
-     * Current logbook, i. e. logbook used for personal logbook extraction.
-     */
-    private $current_logbook;
 
     /**
      * the array of column names to be included, German version.
@@ -45,16 +50,20 @@ class Efa_logbook
     /**
      * public Constructor. Runs the anonymization.
      */
-    public function __construct (Tfyh_toolbox $toolbox, Tfyh_socket $socket, Efa_dataedit $efa_dataedit, 
-            String $current_logbook = "")
+    public function __construct (Tfyh_toolbox $toolbox, Tfyh_socket $socket)
     {
         $this->socket = $socket;
         $this->toolbox = $toolbox;
-        $this->efa_dataedit = $efa_dataedit;
+        include_once "../classes/efa_uuids.php";
+        $this->efa_uuids = new Efa_uuids($toolbox, $socket);
+        include_once "../classes/efa_config.php";
+        $this->efa_config = new Efa_config($toolbox);
+        $this->efa_config->load_efa_config();
+        
         $cfg = $toolbox->config->get_cfg();
-        $this->current_logbook = str_replace("JJJJ", date("Y"), $cfg["current_logbook"]);
-        $this->pers_logbook_cols = (isset($cfg["pers_logbook_cols"]) && (strlen($cfg["pers_logbook_cols"]) > 0)) ? explode(",", $cfg["pers_logbook_cols"]) : [
-                "Fahrtnummer","Datum","Boot","Steuermann","Mannschaft","Abfahrt","Ankunft","Ziel","Kilometer"
+        $this->pers_logbook_cols = (isset($cfg["pers_logbook_cols"]) && (strlen($cfg["pers_logbook_cols"]) > 0)) ? explode(
+                ",", $cfg["pers_logbook_cols"]) : ["Fahrtnummer","Datum","Boot","Steuermann","Mannschaft",
+                "Abfahrt","Ankunft","Ziel","Kilometer"
         ];
         $this->table_tags = [];
         $this->table_tags["table"] = (isset($cfg["pers_logbook_table"]) &&
@@ -107,7 +116,7 @@ class Efa_logbook
                 $mailto = $logbook_recipients[$uuid]["Email"];
                 $mailsubject = "[" . $cfg["acronym"] . "] persönliches Fahrtenbuch";
                 $mailbody = "<html><body><p>Alle Fahrten für " . $logbook_recipients[$uuid]["FirstLastName"] .
-                         " im Fahrtenbuch '" . $this->current_logbook . "' bis jetzt:</p>" . $personal_logbook .
+                         " im Fahrtenbuch '" . $this->efa_config->current_logbook . "' bis jetzt:</p>" . $personal_logbook .
                          $cfg["mail_subscript"] . $cfg["mail_footer"];
                 if (! $only_me || (strcasecmp($mailto, $_SESSION["User"]["EMail"]) == 0)) {
                     $success = $mail_handler->send_mail($mailfrom, $mailfrom, $mailto, "", "", $mailsubject, 
@@ -136,6 +145,10 @@ class Efa_logbook
             return $sports_year_start_this_year;
         else
             return strtotime(strval(intval(date("Y")) - 1) . "-" . $sports_year_start_month . "-01");
+    }
+    
+    public function check_in_period(String $logbookname, String $date) {
+        
     }
 
     /**
@@ -182,32 +195,34 @@ class Efa_logbook
             $total_distance = 0;
             $trip_count = 0;
             
-            // collect trips: Roows
+            // collect trips: Rows
             foreach ($person_trips as $person_trip) {
                 
                 // collect data
                 $row = [];
-                $row["Boot"] = (isset($person_trip["BoatId"])) ? $this->efa_dataedit->resolve_UUID(
+                $row["Boot"] = (isset($person_trip["BoatId"]) && (strlen($person_trip["BoatId"]) > 0)) ? $this->efa_uuids->resolve_UUID(
                         $person_trip["BoatId"])[1] : $person_trip["BoatName"];
-                $row["Steuermann"] = (isset($person_trip["CoxId"])) ? $this->efa_dataedit->resolve_UUID(
+                $row["Steuermann"] = (isset($person_trip["CoxId"]) && (strlen($person_trip["CoxId"]) > 0)) ? $this->efa_uuids->resolve_UUID(
                         $person_trip["CoxId"])[1] : $person_trip["CoxName"];
-                $row["Ziel"] = (isset($person_trip["DestinationId"])) ? $this->efa_dataedit->resolve_UUID(
-                        $person_trip["DestinationId"])[1] : $person_trip["DestinationName"];
+                $row["Ziel"] = (isset($person_trip["DestinationId"]) &&
+                         (strlen($person_trip["DestinationId"]) > 0)) ? $this->efa_uuids->resolve_UUID(
+                                $person_trip["DestinationId"])[1] : $person_trip["DestinationName"];
                 $row["Kilometer"] = intval(
                         str_replace(" ", "", str_replace("km", "", $person_trip["Distance"])));
                 $total_distance += $row["Kilometer"];
                 $row["Mannschaft"] = "";
                 for ($i = 1; $i <= 24; $i ++) {
                     $crewname = "";
-                    if (isset($person_trip["Crew" . $i . "Id"])) {
-                        $crewname = $this->efa_dataedit->resolve_UUID($person_trip["Crew" . $i . "Id"])[1];
+                    if (isset($person_trip["Crew" . $i . "Id"]) &&
+                             (strlen($person_trip["Crew" . $i . "Id"]) > 0)) {
+                        $crewname = $this->efa_uuids->resolve_UUID($person_trip["Crew" . $i . "Id"])[1];
                     } elseif (isset($person_trip["Crew" . $i . "Name"]))
                         $crewname .= $person_trip["Crew" . $i . "Name"];
                     if (strlen($crewname) > 2)
                         $row["Mannschaft"] .= $crewname . ", ";
                 }
                 if (strlen($row["Mannschaft"]) >= 2)
-                    $row["Mannschaft"] = substr($row["Mannschaft"], 0, strlen($row["Mannschaft"]) - 2);
+                    $row["Mannschaft"] = mb_substr($row["Mannschaft"], 0, mb_strlen($row["Mannschaft"]) - 2);
                 $row["Fahrtnummer"] = $person_trip["EntryId"];
                 $row["Datum"] = $person_trip["Date"];
                 $row["Abfahrt"] = $person_trip["StartTime"];

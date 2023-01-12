@@ -98,11 +98,11 @@ class Tfyh_mail_handler
         $this->individualMailPath = "../mails/individual/";
         $this->system_mail_sender = $cfg["system_mail_sender"];
         $elements = explode("<", $this->system_mail_sender, 2);
-        $this->system_mail_address = substr($elements[1], 0, strlen($elements[1]) - 1);
-        $this->mail_schriftwart = $cfg["mail_schriftwart"];
-        $this->mail_webmaster = $cfg["mail_webmaster"];
-        $this->mail_mailer = $cfg["mail_mailer"];
-        $this->mail_subject_acronym = $cfg["mail_subject_acronym"];
+        $this->system_mail_address = mb_substr($elements[1], 0, mb_strlen($elements[1]) - 1);
+        $this->mail_schriftwart = (isset($cfg["mail_schriftwart"])) ? $cfg["mail_schriftwart"] : "mail_webmaster@undefined.org";
+        $this->mail_webmaster = (isset($cfg["mail_webmaster"])) ? $cfg["mail_webmaster"] : "mail_webmaster@undefined.org";
+        $this->mail_mailer = (isset($cfg["mail_mailer"])) ? $cfg["mail_mailer"] : "mail_mailer@undefined.org";
+        $this->mail_subject_acronym = (isset($cfg["mail_subject_acronym"])) ? $cfg["mail_subject_acronym"] : "";
         $this->mail_subscript = $cfg["mail_subscript"];
         $this->mail_footer = $cfg["mail_footer"];
     }

@@ -128,7 +128,7 @@ if ($todo == 1) { // step 1. Texts for output
 		<?php
     // no form errors possible at this step. just a button clicked.
     echo $import_result;
-    echo $form_to_fill->get_html(false);
+    echo $form_to_fill->get_html();
     echo '<h5><br />Ausfüllhilfen</h5><ul>';
     echo $form_to_fill->get_help_html();
     echo "</ul>";

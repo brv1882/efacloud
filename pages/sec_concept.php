@@ -36,7 +36,7 @@ if ($sec_concept_html) {
     ?>
 <!-- START OF content -->
 <div class="w3-container">
-	<h3>Sicherheitskonzept für die Anwendung</h3>
+	<h3>Datenschutzkonzept für die Anwendung</h3>
 	<?php
     echo $sec_concept_html;
     ?>
@@ -46,7 +46,7 @@ if ($sec_concept_html) {
     ?>
 <!-- START OF content -->
 <div class="w3-container">
-	<h3>Sicherheitskonzept für die Anwendung erzeugen</h3>
+	<h3>Datenschutzkonzept<sup class='eventitem' id='showhelptext_Datenschutzkonzept'>&#9432;</sup> für die Anwendung erzeugen</h3>
 	<p>Aus der Anwendung heraus wird ein aktuelles Sicherheitskonzept
 		erzeugt, welches für die Dokumentation gemäß DSGVO verwendet werden
 		kann. Bitte beachte, dass das Sicherheitskonzept nur die Anwendung

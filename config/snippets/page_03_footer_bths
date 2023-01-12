@@ -2,47 +2,48 @@
   <!-- End page content -->
 </div>
 
-    <!-- show and hide submenus Javascript -->
-    <script src="../js/sMenu.js"></script>
-
-    <!-- efa Web Scripts -->
-    <!-- =============== -->
-
     <!-- jQuery framework, smaller version for speed reasons -->
-    <script src="../js/jQuery_3.3.1.js"></script>
+    <script src="../js_09/jQuery_3.3.1.js"></script>
 
-	<!-- server menu script is also used at client side (open, close submenus) -->
-	<script src="../js/sMenu.js"></script>
+    <!-- Common Scripts -->
+    <!-- ============== -->
+    <!-- generic parts -->
+    <script src="../js_09/cGlobals.js"></script>
+    <script src="../js_09/cToolbox.js"></script>
+    <script src="../js_09/cConfig.js"></script>
+    <script src="../js_09/cModal.js"></script>
+    <script src="../js_09/cHelp.js"></script>
+    <script src="../js_09/cLists.js"></script>
+    <script src="../js_09/cAutocomplete.js"></script>
+    <!-- object handling -->
+    <script src="../js_09/oSession.js"></script>
+    <script src="../js_09/oBoat.js"></script>
+    <script src="../js_09/oBoatstatus.js"></script>
+    <script src="../js_09/oReservation.js"></script>
+    <script src="../js_09/oDamage.js"></script>
+    <script src="../js_09/oPerson.js"></script>
 
-    <!-- application script code, generic parts -->
-    <script src="../js/bGlobals.js"></script>
-    <script src="../js/bToolbox.js"></script>
-    <script src="../js/bConfig.js"></script>
-    <script src="../js/bLog.js"></script>
+    <!-- efaCloud Scripts -->
+    <!-- ================ -->
+    <script src="../js_09/sMenu.js"></script>
+    <script src="../js_09/sEvents.js"></script>
 
-    <!-- application script code, UI parts -->
-    <script src="../js/bForm.js"></script>
-    <script src="../js/bFormHandler.js"></script>
-    <script src="../js/bModal.js"></script>
-    <script src="../js/bPanel.js"></script>
-
-    <!-- application script code, data handling -->
-    <script src="../js/bLists.js"></script>
-    <script src="../js/bTrip.js"></script>
-    <script src="../js/bBoat.js"></script>
-    <script src="../js/bBoatstatus.js"></script>
-    <script src="../js/bReservation.js"></script>
-    <script src="../js/bDamage.js"></script>
-    <script src="../js/bPerson.js"></script>
-    <script src="../js/bStatistics.js"></script>
-
-    <!-- application script code, server interface -->
-    <script src="../js/bTxQueue.js"></script>
-    <script src="../js/bTxHandler.js"></script>
-
-    <!-- application script code, event binding -->
-    <script src="../js/bAutocomplete.js"></script>
-    <script src="../js/bEvents.js"></script>
+    <!-- efaWeb Scripts -->
+    <!-- ============== -->
+    <!-- generic parts -->
+    <script src="../js_09/bConfig.js"></script>
+    <script src="../js_09/bLog.js"></script>
+    <!-- UI parts -->
+    <script src="../js_09/bForm.js"></script>
+    <script src="../js_09/bFormHandler.js"></script>
+    <script src="../js_09/bPanel.js"></script>
+    <!-- data handling -->
+    <script src="../js_09/bStatistics.js"></script>
+    <!-- server interface -->
+    <script src="../js_09/bTxQueue.js"></script>
+    <script src="../js_09/bTxHandler.js"></script>
+    <!-- event binding -->
+    <script src="../js_09/bEvents.js"></script>
 
 </body>
 </html>

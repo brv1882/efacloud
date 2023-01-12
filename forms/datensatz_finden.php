@@ -11,7 +11,6 @@ $user_requested_file = __FILE__;
 include_once "../classes/init.php";
 include_once '../classes/tfyh_form.php';
 include_once '../classes/efa_tables.php';
-$efa_tables = new Efa_tables($toolbox, $socket);
 
 $users_to_show_html = "";
 
@@ -21,14 +20,7 @@ $todo = ($done == 0) ? 1 : $done;
 $form_errors = "";
 $form_layout = "../config/layouts/datensatz_finden";
 $translations = explode("\n", file_get_contents("../config/db_layout/names_translated_de"));
-$en2de = [];
-$de2en = [];
-foreach ($translations as $translation) {
-    $parts = explode("=", $translation, 2);
-    $de = (strlen($parts[1]) > 0) ? $parts[1] : $parts[0];
-    $en2de[$parts[0]] = $de;
-    $de2en[$de] = $parts[0];
-}
+$en2de = Efa_tables::locale_names("de");
 
 // ======== Start with form filled in last step: check of the entered values.
 if ($done > 0) {
@@ -53,65 +45,86 @@ if ($done > 0) {
             $searchkey = "#" . $efa2tablefield;
         $_SESSION["efa2tablefield"] = $efa2tablefield;
         $searchvalue = "%" . $entered_data["Value"] . "%";
+        $sort_key = $searchkey;
+        if (in_array($_SESSION["efa2table"], Efa_tables::$versionized_table_names))
+            $sort_key = (strcasecmp($_SESSION["efa2table"], "efa2persons") == 0) ? "FirstLastName,InvalidFrom" : "Name,InvalidFrom";
         $records = $socket->find_records_sorted_matched($_SESSION["efa2table"], 
                 [$efa2tablefield => $searchvalue
-                ], 50, "LIKE", $searchkey, true, false);
+                ], 50, "LIKE", $sort_key, true);
         $todo = $done + 1;
     }
     
     // if data sets were selected, create list output. Resolve UUIDs.
     if ($todo == 3) {
         $i = 0;
-        $v = 0;
-        include_once "../classes/efa_dataedit.php";
-        $efa_dataedit = new Efa_dataedit($toolbox, $socket);
-        $results_to_show_html = "";
+        $results_to_show_html = "<ul>";
         $date = new DateTime();
-        $nowSeconds = $date->getTimestamp();
-        $_SESSION["search_result"] = [];
-        $is_versionized = in_array($_SESSION["efa2table"], $efa_tables->is_versionized);
+        $nowSeconds = time();
+        $is_versionized_table = in_array($_SESSION["efa2table"], Efa_tables::$versionized_table_names);
         $short_info_fields = Efa_tables::$short_info_fields[$_SESSION["efa2table"]];
-        if (is_array($records))
+        if (is_array($records)) {
+            $r = 0;
             foreach ($records as $record) {
-                // PHP version may not be 64 bit, then the max int is 2 billion. Makes the validity
-                // check a bit complex.
-                $invalid = $is_versionized && (! isset($record["InvalidFrom"]) || ((strlen(
-                        $record["InvalidFrom"]) < 15) &&
-                         (intval(substr($record["InvalidFrom"], 0, 10)) < $nowSeconds)));
-                if ($invalid)
-                    $results_to_show_html .= "<span style='color:#aaa'>";
-                foreach ($record as $key => $value) {
-                    if (in_array($key, $short_info_fields) ||
-                             (strcasecmp($key, $_SESSION["efa2tablefield"]) == 0)) {
-                        if (in_array($key, $efa_tables->timestampFields) && (strlen(strval($value)) > 0))
-                            $value = $efa_tables->get_readable_date_time($value);
-                        if ((strlen(strval($value)) > 0) && (strcasecmp($key, "ecrhis") !== 0)) {
-                            if ((strcasecmp($key, $_SESSION["efa2tablefield"]) == 0) ||
-                                     ((strcasecmp($key, "InvalidFrom") == 0) && $invalid)) {
-                                $results_to_show_html .= "<b>" . $en2de[$key] . ": '" . $value . "'</b>, ";
-                            } else {
-                                $results_to_show_html .= $en2de[$key] . ": '" . $value . "', ";
+                // filter in case of versionized tables the most recent record.
+                $r ++;
+                $other_id = ! isset($records[$r]) || ! isset($records[$r]["Id"]) ||
+                         (strcmp($record["Id"], $records[$r]["Id"]) != 0);
+                if (! $is_versionized_table || ($r == count($records)) || $other_id) {
+                    // PHP version may not be 64 bit, then the max int is 2 billion. Makes the validity
+                    // check a bit complex.
+                    $invalid_from32 = (isset($record["InvalidFrom"])) ? Efa_tables::value_validity32(
+                            $record["InvalidFrom"]) : 0;
+                    $invalid = $is_versionized_table && ($invalid_from32 < $nowSeconds);
+                    $invalid = $invalid || (strcmp($record["LastModification"], "delete") == 0);
+                    $results_to_show_html .= "<li>\n";
+                    if ($invalid)
+                        $results_to_show_html .= "<span style='color:#aaa'>";
+                    foreach ($record as $key => $value) {
+                        $is_efa2tablefield = (strcasecmp($key, $_SESSION["efa2tablefield"]) == 0);
+                        if (in_array($key, $short_info_fields) || $is_efa2tablefield) {
+                            if (in_array($key, Efa_tables::$timestamp_field_names) &&
+                                     (strlen(strval($value)) > 0))
+                                $value = Efa_tables::get_readable_date_time($value);
+                                if (in_array($key, Efa_tables::$date_fields[$_SESSION["efa2table"]]) &&
+                                     (strlen(strval($value)) > 0))
+                                $value = date("d.m.Y", strtotime($value));
+                            if ((strlen(strval($value)) > 0) && (strcasecmp($key, "ecrhis") !== 0)) {
+                                if ((strcasecmp($key, $_SESSION["efa2tablefield"]) == 0) ||
+                                         ((strcasecmp($key, "InvalidFrom") == 0) && $invalid)) {
+                                    $results_to_show_html .= "<b>" . $en2de[$key] . ": '" . $value . "'</b>, ";
+                                } else {
+                                    $results_to_show_html .= $en2de[$key] . ": '" . $value . "', ";
+                                }
                             }
                         }
                     }
+                    $results_to_show_html .= $en2de["LastModification"] . ": '" . $record["LastModification"] .
+                             "', ";
+                    if ($invalid) {
+                        $results_to_show_html .= "</span>";
+                        if (strcmp($record["LastModification"], "delete") == 0)
+                            $results_to_show_html .= "Datensatz gelöscht am " .
+                                     date("d.m.Y", Efa_tables::value_validity32($record["LastModified"]));
+                        else
+                            $results_to_show_html .= "<a href='../forms/datensatz_aendern.php?table=" .
+                                     $_SESSION["efa2table"] . "&ecrid=" . $record["ecrid"] .
+                                     "'>Datensatz wieder öffnen</a>";
+                    } else {
+                        $results_to_show_html .= " - <a href='../pages/view_record.php?table=" .
+                                 $_SESSION["efa2table"] . "&ecrid=" . $record["ecrid"] .
+                                 "'>Details anzeigen</a>";
+                        $results_to_show_html .= " - <a href='../forms/datensatz_aendern.php?table=" .
+                                 $_SESSION["efa2table"] . "&ecrid=" . $record["ecrid"] .
+                                 "'>Datensatz ändern</a>";
+                    }
+                    $results_to_show_html .= "</li>\n";
+                    $i ++;
                 }
-                $results_to_show_html .= $en2de["LastModification"] . ": '" . $record["LastModification"] .
-                         "', ";
-                
-                if ($invalid)
-                    $results_to_show_html .= "</span>";
-                else {
-                    $v ++;
-                    $_SESSION["search_result"][$v] = $record;
-                    $results_to_show_html .= " - <a href='../pages/view_record.php?searchresultindex=" . $v .
-                             "'>Details anzeigen</a>";
-                }
-                $results_to_show_html .= "<br />\n";
-                $i ++;
             }
-        if ($i === 0) {
-            $results_to_show_html = "<b>Hinweis:</b><br>Kein passender Datensatz gefunden.";
+            if ($i === 0)
+                $results_to_show_html = "<li><b>Hinweis:</b><br>Kein passender Datensatz gefunden.</li>";
         }
+        $results_to_show_html .= "</ul>";
     }
 }
 
@@ -130,7 +143,7 @@ if (isset($form_filled) && ($todo == $form_filled->get_index())) {
         $total_record_count = 0;
         $total_table_count = 0;
         foreach ($table_names as $tn) {
-            if ($efa_tables->is_efa_table($tn)) {
+            if (Efa_tables::is_efa_table($tn)) {
                 $record_count = $socket->count_records($tn);
                 $total_record_count += $record_count;
                 $total_table_count ++;
@@ -164,9 +177,14 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 ?>
 <!-- START OF content -->
 <div class="w3-container">
-	<h3>Einen Datensatz finden</h3>
-	<p>Hier kannst Du einen efa-Datensatz unter Angabe der efa2-Tabelle und der zu
-		überprüfenden Spalte finden. Für die efaCloud-Tabellen nutze bitte die Verwaltuzngsfunktionen.</p>
+	<h3>
+		Einen efa-Datensatz<sup class='eventitem' id='showhelptext_efaDaten'>&#9432;</sup>
+		finden
+	</h3>
+	<p>Hier kannst Du einen beliebigen efa-Datensatz finden. Wähle zuerst
+		die Tabelle aus, dann kannst Du einen Filter auf ein Datenfeld setzen.
+		Für efaCloud Nutzerdaten gibt es bei vorliegender Berechtigung ein
+		entsprechendes Menü.</p>
 </div>
 
 <div class="w3-container">
@@ -174,18 +192,24 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 
 echo $toolbox->form_errors_to_html($form_errors);
 if ($todo < 3) {
-    if ($todo == 1)
-        echo "<p>Datensätze pro Tabelle:<br>" . $table_record_count_list . "</p>";
-    elseif ($todo == 2)
+    if ($todo == 2)
         echo "<p>Gewählte Tabelle:<br><b>" . $_SESSION["efa2table"] . "</b> mit " . $record_count .
                  " Datensätzen</p>";
-    echo $form_to_fill->get_html($fs_id);
+    echo $form_to_fill->get_html();
     echo '<h5><br />Ausfüllhilfen</h5><ul>';
     echo $form_to_fill->get_help_html();
     echo "</ul>";
+    if ($todo == 1)
+        echo "<p>Datensätze pro Tabelle:<br>" . $table_record_count_list . "</p>";
 } else {
     echo "<p>Tabelle: <b>" . $_SESSION["efa2table"] . "</b><br>";
-    echo "Filter: <b>" . $_SESSION["efa2tablefield"] . " = '" . $searchvalue . "'</b></p>";
+    echo "Filter: <b>" . $_SESSION["efa2tablefield"] . " = '" . $searchvalue . "'</b>";
+    if ($is_versionized_table)
+        echo "<br>Die Liste ist nach Namen sortiert und es wird die jeweils letzte gültige Version des Objekts angezeigt.";
+    else
+        echo "<br>Die Liste ist nach dem gefilterten Feld: $sort_key sortiert.";
+    
+    echo "</p>";
     echo $results_to_show_html;
 }
 ?></div><?php

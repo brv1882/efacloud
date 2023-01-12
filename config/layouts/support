@@ -1,14 +1,14 @@
 tags;required;name;value;label;type;class;size;maxlength
 <div class='w3-row'><div class='w3-col l2'>;*; \
-  Vorname;;Ihr Vorname;text;;90%;250
+  Vorname;;Dein Vorname;text;;90%;250
 </div><div class='w3-col l2'>;*; \
-  Nachname;;Ihr Nachname;text;;90%;250
+  Nachname;;Dein Nachname;text;;90%;250
 </div></div><div class='w3-row'><div class='w3-col l1'>;*; \
-  EMail;;Ihr E-Mail-Adresse für die Kontaktaufnahme durch den Support;email;;95%;250
+  EMail;;Deine E-Mail-Adresse für die Kontaktaufnahme durch den Support;email;;95%;250
 </div></div><div class='w3-row'><div class='w3-col l1'>;*; \
   Verein;;Der Verein, bei dem efaCloud eingesetzt wird;text;;90%;250
 </div></div><div class='w3-row'><div class='w3-col l1'>;*; \
-  Anliegen;;Ihr Anliegen;textarea;;4;
+  Anliegen;;Dein Anliegen;textarea;;4;
 </div></div><div class='w3-row'><div class='w3-col l1'>;;_no_input;; ;;;;
 </div></div><div class='w3-row'><div class='w3-col l1'>;; \
   NamedUser;;Unser Verein nutzt efaCloud und darf auf efacloud.org als nutzender Verein benannt werden.;checkbox;;5;5

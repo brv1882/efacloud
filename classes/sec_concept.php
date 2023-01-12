@@ -94,7 +94,8 @@ class Sec_concept
         // MySQLversion
         $this->variables["MySQLversion"] = $this->socket->get_server_info();
         // dbUserKennwortlaenge
-        $this->variables["dbUserKennwortlaenge"] = strval(strlen($cfg["db_up"]));
+        $this->variables["dbUserKennwortlaenge"] = strval(
+                mb_strlen($this->toolbox->config->get_cfg_db()["db_up"]));
         
         // max_inits_per_hour
         $this->variables["max_inits_per_hour"] = strval(
@@ -122,24 +123,9 @@ class Sec_concept
         $this->variables["ZugriffeWeb"] = $activities_table . "</table>";
         
         // ZugriffeAPI, cf. "../pages/home.php"
-        $clients = scandir("../log/lra");
-        $active_clients = "";
-        foreach ($clients as $client) {
-            if (($client != ".") && ($client != "..")) {
-                $client_record = $this->socket->find_record("efaCloudUsers", "efaCloudUserID", $client);
-                if ($client_record !== false) {
-                    $active_clients .= "<p>" . $client_record["Vorname"] . " " . $client_record["Nachname"] .
-                             " (#" . $client_record["efaCloudUserID"] . ", " . $client_record["Rolle"] .
-                             "), letzte Aktivität: " . file_get_contents("../log/lra/" . $client) . "</p>";
-                    if (file_exists("../log/contentsize/" . $client))
-                        $active_clients .= "<table><tr><td>" . str_replace("\n", "</td></tr><tr><td>", 
-                                str_replace(";", "</td><td>", 
-                                        trim(file_get_contents("../log/contentsize/" . $client)))) .
-                                 "</td></tr></table>";
-                }
-            }
-        }
-        $this->variables["ZugriffeAPI"] = $active_clients;
+        include_once "../classes/efa_config.php";
+        $efa_config = new Efa_config($toolbox);
+        $this->variables["ZugriffeAPI"] = $efa_config->get_last_accesses_API($this->socket, false, true);
         
         // ChangesAll
         include_once "../classes/tfyh_list.php";

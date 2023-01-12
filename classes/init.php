@@ -30,7 +30,10 @@ function end_script (bool $add_footer = true)
     if ($debug)
         file_put_contents(__DIR__ . "/../log/debug_init.log", 
                 "  script closed at " . date("Y-m-d H:i:s") . ".\n", FILE_APPEND);
-    $session_user = (isset($_SESSION["User"][$toolbox->users->user_id_field_name])) ? $_SESSION["User"][$toolbox->users->user_id_field_name] : 0;
+    // session user must not be logged for data privacy reasons. Only undefined (0), unset (-1) and
+    // logged in (1) ist differentiated.
+    $session_user = (isset($_SESSION["User"][$toolbox->users->user_id_field_name])) ? min(
+            intval($_SESSION["User"][$toolbox->users->user_id_field_name]), 1) : 0;
     $toolbox->logger->put_timestamp($session_user, $user_requested_action, $php_script_started_at);
 }
 
@@ -57,6 +60,16 @@ function shutdown ()
     file_put_contents(__DIR__ . "/../log/sys_shutdowns.log", 
             date("Y-m-d H:i:s") . ": Shutting down " . $user_requested_action . ". Script started at " .
                      $php_script_started_at . "\n", FILE_APPEND);
+    
+    $error = error_get_last();
+    if (($error !== NULL) && isset($error["type"]) && (intval($error["type"]) == E_ERROR)) {
+        $errinfo = "File : " . $error["file"] . ", Line : " . $error["line"] .
+                 ", Message : " . $error["message"];
+        file_put_contents(__DIR__ . "/../log/sys_shutdowns.log", 
+                date("Y-m-d H:i:s") . ": Last Error = " . $errinfo . "\n", FILE_APPEND);
+        echo "<h1>Oops! A fatal error.</h1><p>" . $errinfo .
+                 ".</p><p>Please help to improve the software by giving this information to your support team.<br>Thanks!</p>";
+    }
 }
 register_shutdown_function('shutdown');
 
@@ -78,17 +91,21 @@ $file_path_elements = explode("/", $user_requested_file);
 $index_last = count($file_path_elements) - 1;
 $user_requested_action = $file_path_elements[$index_last - 1] . "/" . $file_path_elements[$index_last];
 // resolve app root URL for use in scripts.
-$app_root = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+$app_root = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") .
+         "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
 // cut off get parameters
 $app_root = (strrpos($app_root, "?") !== false) ? substr($app_root, 0, strrpos($app_root, "?")) : $app_root;
 // cut off last two path elements
 $app_root = (strrpos($app_root, "/") !== false) ? substr($app_root, 0, strrpos($app_root, "/")) : "Server missing/somehow";
-$app_root = substr($app_root, 0, strrpos($app_root, "/"));   // e.g.: "https://rcwb.de/efacloud"
-$app_domain = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]";   // e.g.: "https://rcwb.de"
-$app_subdirectory = substr($app_root, strlen($app_domain) + 1);    // e.g.: "efacloud"
-
+$app_root = substr($app_root, 0, strrpos($app_root, "/")); // e.g.: "https://rcwb.de/efacloud"
+$app_domain = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") .
+         "://$_SERVER[HTTP_HOST]"; // e.g.:
+                                  // "https://rcwb.de"
+$app_subdirectory = mb_substr($app_root, mb_strlen($app_domain) + 1); // e.g.: "efacloud"
+                                                                      
 // ===== throttle to prevent from machine attacks. Will return to the user in overload situations.
-$toolbox->load_throttle("inits/", $toolbox->config->settings_tfyh["init"]["max_inits_per_hour"]);
+$toolbox->load_throttle("inits", $toolbox->config->settings_tfyh["init"]["max_inits_per_hour"], 
+        $user_requested_file);
 $toolbox->logger->log_init_login_error("init");
 
 // ===== remove any existiong tfyh user and session cookie
@@ -96,27 +113,46 @@ setcookie("tfyhUserID", "", time() - 3600);
 setcookie("tfyhSessionID", "", time() - 3600);
 
 // ===== Try to open an existing session.
-$session_open_result = $toolbox->app_sessions->session_open(-1);
+$session_open_result = $toolbox->app_sessions->session_open(- 1);
+// load throttling
 if ($session_open_result == false) {
     $script_completed = true;
-    $toolbox->display_error($toolbox->overload_error_headline, 
-            "Die Anwendung ist überlastet. Bitte versuchen Sie es später noch einmal. Wir bitten um Verständnis.", 
+    $toolbox->display_error($toolbox->too_many_sessions_error_headline, 
+            "Zur Zeit sind zu viele Anwender angemeldet. Bitte versuchen Sie es später noch einmal. Wir bitten um Verständnis.", 
             $user_requested_file);
 }
+// keep anonymous sessions only, if a form was requested (like login or registrations).
 if (! isset($_SESSION["User"]))
     $_SESSION["User"] = $toolbox->users->get_empty_user();
+$user_id = (isset($_SESSION["User"][$toolbox->users->user_id_field_name])) ? intval(
+        $_SESSION["User"][$toolbox->users->user_id_field_name]) : - 1;
+$is_user_request_for_form = strcasecmp($file_path_elements[$index_last - 1], "forms") == 0;
+if (! $is_user_request_for_form && ($user_id == - 1)) {
+    // drop app session, if no form was requested
+    $toolbox->app_sessions->session_close(
+            "anonymous request for not a form: " . $file_path_elements[$index_last - 1] . "/" .
+                     $file_path_elements[$index_last], "");
+}
+
 $debug = ($toolbox->config->debug_level > 0);
 if ($debug)
     file_put_contents("../log/debug_init.log", 
             date("Y-m-d H:i:s") . "\n  File: " . $user_requested_file .
-                     "\n  User after session check: appUserID " .
-                     $_SESSION["User"][$toolbox->users->user_id_field_name] . ", Rolle: " .
-                     $_SESSION["User"]["Rolle"] . "\n", FILE_APPEND);
+                     "\n  User after session check: appUserID " . $user_id . ", Rolle: " .
+                     ((isset($_SESSION["User"]["Rolle"])) ? $_SESSION["User"]["Rolle"] : "[undefined]") . "\n", 
+                    FILE_APPEND);
+// log web access for statistics
+$now = time();
+file_put_contents("../log/access_web_" . intval($now / 1000000), 
+        $now . ";" . $user_id . ";" . $file_path_elements[$index_last - 1] . ";" .
+                 str_replace(".php", "", $file_path_elements[$index_last]) . "\n", FILE_APPEND);
 
 // ===== identify current context, i. e. the parent directory's parent.
 // The application holds all executable code in directories at the application root. Multiple
-// applications of such type may reside in one web server serving different tenants. The session must
-// recognise, if the application root was changed, to prevent users from using their access rights in any
+// applications of such type may reside in one web server serving different tenants. The session
+// must
+// recognise, if the application root was changed, to prevent users from using their access rights
+// in any
 // other tenant.
 $context = getcwd();
 $context = substr($context, 0, strrpos($context, "/"));
@@ -153,13 +189,14 @@ if (! isset($dbconnect)) {
 }
 
 // ===== resolve and update user
-$userID = intval($_SESSION["User"][$toolbox->users->user_id_field_name]);
-$cached_session_role = $_SESSION["User"]["Rolle"];
+// cache the current role which may be different from the users default role (less powerful, for testing
+// purposes)
+$cached_session_role = (isset($_SESSION["User"]) && isset($_SESSION["User"]["Rolle"])) ? $_SESSION["User"]["Rolle"] : $toolbox->users->anonymous_role;
 $_SESSION["User"] = $toolbox->users->get_empty_user();
 // re-read user from data base with possibly updated properties
-if ($userID >= 0) {
+if ($user_id >= 0) {
     $refreshed_user = $socket->find_record($toolbox->users->user_table_name, 
-            $toolbox->users->user_id_field_name, $userID);
+            $toolbox->users->user_id_field_name, $user_id);
     if ($refreshed_user != false) {
         $_SESSION["User"] = $refreshed_user;
         // restore the session role
@@ -170,8 +207,8 @@ if ($userID >= 0) {
 $menu_template = (strcasecmp($_SESSION["User"]["Rolle"], $toolbox->users->anonymous_role) == 0) ? "pmenu" : "imenu";
 if ($debug)
     file_put_contents("../log/debug_init.log", 
-            "  User after DB check: appUserID: " . $_SESSION["User"][$toolbox->users->user_id_field_name] .
-                     ", Rolle: " . $_SESSION["User"]["Rolle"] . "\n", FILE_APPEND);
+            "  User after DB check: appUserID: " . $user_id . ", Rolle: " . $_SESSION["User"]["Rolle"] . "\n", 
+            FILE_APPEND);
 include_once '../classes/tfyh_menu.php';
 $menu = new Tfyh_menu("../config/access/" . $menu_template, $toolbox);
 
@@ -200,6 +237,10 @@ if (isset($_GET["fseq"])) {
         $toolbox->display_error("Fehler in der Formularsequenz.", 
                 "Es wurde eine ungültige Sequenzziffer angegeben.", $user_requested_file);
     $fs_id = substr($_GET["fseq"], 0, 5);
+    if (! isset($_SESSION["forms"]))
+        $toolbox->display_error("Timeout wegen Inaktivität.", 
+                "Die Formularbearbeitung kann leider nicht fortgesetzt werden, weil zu lange keine Speicherung einer Formularseite erfolgte.", 
+                $user_requested_file);
     if (! isset($_SESSION["forms"][$fs_id]))
         $toolbox->display_error("Fehler in der Formularsequenz.", 
                 "Es wurde eine ungültige Formular-ID angegeben.", $user_requested_file);
@@ -215,4 +256,3 @@ foreach ($_GET as $gkey => $gvalue)
 
 // now set socket listeners, if required
 // was for efaCloud partners, now removed (27.02.2022)
-    

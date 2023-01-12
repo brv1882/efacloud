@@ -82,7 +82,6 @@ echo $statistics->count_txq_records;
 <!-- Load the AJAX API -->
 <script type="text/javascript"
 	src="https://www.gstatic.com/charts/loader.js"></script>
-<script type="text/javascript" src="../js/jQuery_3.3.1.js"></script>
 
 <script type="text/javascript">
     var data_container_duration = <?php echo $statistics->get_container_duration_chart_data(); ?>;

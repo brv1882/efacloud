@@ -8,12 +8,11 @@
 session_start(); // you need to start the session to be able to destroy it.
                  // delete the extra session file which was stored for load throttling (session
                  // counter)
-$session_file = "../log/sessions/" . session_id();
-if (file_exists($session_file))
-    unlink($session_file);
-// now destroy the session
-session_destroy();
-$_SESSION = array();
+include_once "../classes/tfyh_toolbox.php";
+$toolbox = new Tfyh_toolbox();
+include_once "../classes/tfyh_app_sessions.php";
+$app_sessions = new Tfyh_app_sessions($toolbox);
+$app_sessions->session_close("logout", session_id());
 
 // ===== initialize toolbox and socket and start session.
 $user_requested_file = __FILE__;

@@ -16,8 +16,15 @@ $menu = new Tfyh_menu("../config/access/wmenu", $toolbox);
 setcookie("tfyhUserID", $_SESSION["User"][$toolbox->users->user_id_field_name], 0);
 setcookie("tfyhSessionID", session_id(), 0);
 
-$cfg = $toolbox->config->get_cfg();
-$current_logbook = str_replace("JJJJ", date("Y"), $cfg["current_logbook"]);
+include_once "../classes/efa_config.php";
+$efa_config = new Efa_config($toolbox);
+// set logbook allowance
+$logbook_allowance = ((strcasecmp($_SESSION["User"]["Rolle"], "admin") == 0) ||
+         (strcasecmp($_SESSION["User"]["Rolle"], "board") == 0)) ? "all" : "workflow";
+// set logbook
+$logbook_to_use = $efa_config->current_logbook;
+// set name format
+$name_format = $efa_config->config["NameFormat"];
 
 // ===== start page output
 // start with boathouse header, which includes the set of javascript references needed.
@@ -25,21 +32,17 @@ echo file_get_contents('../config/snippets/page_01_start');
 echo $menu->get_menu();
 echo file_get_contents('../config/snippets/page_02_nav_to_body');
 ?>
-<!-- The Modal -->
-<div id="bModal" class="modal" style="z-index: 4">
-	<!-- Modal content -->
-	<div id="bModal_content" class="modal-content">
-		<span class="close">&times;</span>
-		<p>Some text in the Modal.</p>
-	</div>
-</div>
-<span style='display:none;' class='current-logbook' id='<?php echo $current_logbook; ?>'></span>
+<span style='display: none;' class='current-logbook'
+	id='<?php echo $logbook_to_use; ?>'></span>
+<span style='display: none;' class='logbook-allowance'
+	id='<?php echo $logbook_allowance; ?>'></span>
+<span style='display: none;' class='person-id'
+	id='<?php echo $_SESSION["User"]["PersonId"]; ?>'></span>
 <!-- Projects grid (4 columns, 1 row; images must have the same size)-->
 <!-- Display grid (2 columns)-->
 <div class='w3-row'>
 	<div class="w3-container" id="bths-headerpanel">
-		<div class="w3-col l1">
-		</div>
+		<div class="w3-col l1"></div>
 	</div>
 </div>
 <div class='w3-row'>
@@ -70,14 +73,18 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 </div>
 
 <?php
+// pass information to Javascript.
+// User information
 if (isset($_SESSION["User"])) {
-    $script = "\n\n<script>\nvar currentUserAtServer = {\n";
-    foreach ($_SESSION["User"] as $key => $value) {
+    $currentUserAtServer = [];
+    foreach ($_SESSION["User"] as $key => $value)
         if (strcasecmp($key, "ecrhis") != 0)
-            $script .= '    ' . $key . ' : "' . $value . '"' . ",\n";
-    }
-    $script .= '    sessionID : "' . session_id() . '"' . "\n";
-    $script .= "};\n</script>\n\n";
-    echo $script;
+            $currentUserAtServer[$key] = $value;
+    $currentUserAtServer["sessionID"] = session_id();
+    $script = "\n\n<script>\nvar currentUserAtServer = " .
+             json_encode(str_replace("\"", "\\\"", $currentUserAtServer)) . ";\n</script>\n\n";
+    // echo $script; Obsolet??
 }
+
+echo $efa_config->pass_on_config();
 echo file_get_contents('../config/snippets/page_03_footer_bths');

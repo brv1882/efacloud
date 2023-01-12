@@ -2,7 +2,29 @@
   <!-- End page content -->
 </div>
 
-    <!-- show and hide submenus Javascript -->
-    <script src="../js/sMenu.js"></script>
+    <!-- jQuery framework, smaller version for speed reasons -->
+    <script src="../js_09/jQuery_3.3.1.js"></script>
+
+    <!-- application script code, generic parts -->
+    <script src="../js_09/cGlobals.js"></script>
+    <script src="../js_09/cToolbox.js"></script>
+    <script src="../js_09/cConfig.js"></script>
+    <script src="../js_09/cModal.js"></script>
+    <script src="../js_09/cHelp.js"></script>
+    <script src="../js_09/cLists.js"></script>
+    <script src="../js_09/cAutocomplete.js"></script>
+
+    <!-- application script code, object parts -->
+    <script src="../js_09/oBoat.js"></script>
+
+    <!-- efaCloud Scripts -->
+    <!-- ================ -->
+
+    <!-- tfyh show and hide submenus Javascript -->
+    <script src="../js_09/sMenu.js"></script>
+    <!-- efaCloud specific scripts -->
+    <script src="../js_09/sEvents.js"></script>
+    <script src="../js_09/sFormHandler.js"></script>
+
 </body>
 </html>

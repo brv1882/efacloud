@@ -9,6 +9,7 @@
 $user_requested_file = __FILE__;
 include_once "../classes/init.php";
 include_once '../classes/tfyh_form.php';
+include_once '../classes/efa_tables.php';
 
 $tmp_upload_file = "";
 
@@ -27,10 +28,8 @@ if ($done > 0) {
     $mode = (intval($entered_data["Modus"]) > 0) ? intval($entered_data["Modus"]) : $_SESSION["personsImportMode"];
     $_SESSION["personsImportMode"] = $mode;
     
-    include_once '../classes/efa_tables.php';
-    $efa_tables = new Efa_tables($toolbox, $socket);
-    include_once '../classes/efa_audit.php';
-    $efa_audit = new Efa_audit($efa_tables, $toolbox);
+    include_once '../classes/efa_record.php';
+    $efa_record = new Efa_record($toolbox, $socket);
     $valid_records = array();
     $user_id = $_SESSION["User"][$toolbox->users->user_id_field_name];
     
@@ -63,9 +62,11 @@ if ($done > 0) {
                 $r = 0;
                 foreach ($records as $record) {
                     $r ++;
-                    $import_check_prefix = "Prüfe Zeile " . $r . ": " . $record["FirstName"] . " " .
-                             $record["LastName"];
-                    $modification_result = $efa_audit->modify_version(6, $record, $mode, false, false);
+                    $full_name = Efa_tables::virtual_full_name($record["FirstName"], $record["LastName"], 
+                            $toolbox);
+                    $import_check_prefix = "Prüfe Zeile " . $r . ": " . $full_name;
+                    $modification_result = $efa_record->modify_version("efa2persons", $record, $mode, 
+                            $user_id, false, false);
                     if (strlen($modification_result) == 0)
                         $import_check_info .= $import_check_prefix . " - ok.<br>";
                     else
@@ -87,9 +88,11 @@ if ($done > 0) {
         $r = 0;
         foreach ($records as $record) {
             $r ++;
-            $import_done_prefix = "Führe aus Zeile " . $r . ": " . $record["FirstName"] . " " .
-                     $record["LastName"];
-            $modification_result = $efa_audit->modify_version(6, $record, $mode, true, true);
+            $full_name = Efa_tables::virtual_full_name($record["FirstName"], $record["LastName"],
+                    $toolbox);
+            $import_done_prefix = "Führe aus Zeile " . $r . ": " . $full_name;
+            $modification_result = $efa_record->modify_version("efa2persons", $record, $mode, $user_id, true, 
+                    true);
             if (strlen($modification_result) == 0)
                 $import_done_info .= $import_done_prefix . " - ok.<br>";
             else
@@ -169,7 +172,8 @@ if ($todo == 1) { // step 1. Texts for output
 			Auswahl. Die Felder 'ValidFrom' und 'ValidFromDate' müssen fehlen
 			oder leer sein.<br> <i>ein Beispiel (ändert den Namen und den
 				Status):<br> Id;FirstName;LastName;StatusName<br>
-				12345678-1234-5678-90ab-1234567890ab;Max;Mustermann;Senior(in)</i></li>
+				12345678-1234-5678-90ab-1234567890ab;Max;Mustermann;Senior(in)
+		</i></li>
 	</ol>
 	<p>Immer erst eine Prüfung vor Import</p>
 	<ol>
@@ -196,7 +200,7 @@ if ($todo == 1) { // step 1. Texts for output
 		werden soll (kein rückgängig möglich).</p>
 		<?php
     // no form errors possible at this step. just a button clicked.
-    echo $form_to_fill->get_html(false);
+    echo $form_to_fill->get_html();
     echo '<h5><br />Ausfüllhilfen</h5><ul>';
     echo $form_to_fill->get_help_html();
     echo "</ul>";

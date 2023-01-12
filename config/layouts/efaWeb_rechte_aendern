@@ -1,5 +1,8 @@
 tags;required;name;value;label;type;class;size;maxlength
-<div class='w3-row'><div class='w3-col l1'>;;ewLogbookEntry;;efaWeb: Fahrten in das aktuelle Fahrtenbuch eintragen;checkbox;;;
+<div class='w3-row'><div class='w3-col l1'>;;ewLogbookEntryBths1;;efaWeb: Fahrten in das Fahrtenbuch für Bootshaus #1 eintragen;checkbox;;;
+</div></div><div class='w3-row'><div class='w3-col l1'>;;ewLogbookEntryBths2;;efaWeb: Fahrten in das Fahrtenbuch für Bootshaus #2 eintragen;checkbox;;;
+</div></div><div class='w3-row'><div class='w3-col l1'>;;ewLogbookEntryBths3;;efaWeb: Fahrten in das Fahrtenbuch für Bootshaus #3 eintragen;checkbox;;;
+</div></div><div class='w3-row'><div class='w3-col l1'>;;ewLogbookEntryBths4;;efaWeb: Fahrten in das Fahrtenbuch für Bootshaus #4 eintragen;checkbox;;;
 </div></div><div class='w3-row'><div class='w3-col l1'>;;ewMessageEntry;;efaWeb: Nachrichten hinterlassen;checkbox;;;
 </div></div><div class='w3-row'><div class='w3-col l1'>;;ewDamageEntry;;efaWeb: Schadensmeldungen abgeben;checkbox;;;
 </div></div><div class='w3-row'><div class='w3-col l1'>;;ewReservationEntry;;efaWeb: Boote reservieren;checkbox;;;

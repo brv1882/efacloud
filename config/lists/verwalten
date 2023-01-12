@@ -10,5 +10,3 @@ id;permission;name;select;from;where;options
   Rolle,Passwort_Hash,LastModified,ecrhis,efaAdminName,Workflows,Concessions;efaCloudUsers; \
   (`Workflows`> 0) OR (`Concessions`> 0);sort=ID
 5;admin;Changelog (auch für Security-Concept);ID,Author,Time,ChangedTable,ChangedID,Modification,LastModified;efaCloudLog;1;sort=ID
-6;admin;Gesäuberte Datensätze;ID,Author,Time,Reason,ChangedTable,ChangedRecord;efaCloudCleansed;1;sort=ID
-7;admin;Archivierte Datensätze;ID,Time,Table,Record;efaCloudArchived;1;sort=ID&link=ID:../pages/view_archive_record.php?id=

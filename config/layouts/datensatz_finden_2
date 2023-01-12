@@ -6,5 +6,5 @@ tags;required;name;value;label;type;class;size;maxlength
 </div></div><div class='w3-row' style='margin-top:20px'><div class='w3-col l1'><div style='float:left'>;; \
   submit;Finden;;submit;formbutton;;
 </div></div></div>;;_no_input;;;;;;
-<li><span class='helptext'>;;_help_text;;Bitte die für Parameter manchmal relevante Syntax beachten. Keine automatische Prüfung.;;;;
+<li><span class='helptext'>;;_help_text;;Der Text wird immer als Teil des Datenfeldinhalts gesucht, so zum Beispiel Findet man in den Fahrtenbüchern mit der Angabe "123" der Fahrtnummer auch die Fahrten 1230, 1231, 1232, 2123, 3123, ... .;;;;
 </span></li>;;_help_text;;;;;;

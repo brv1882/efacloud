@@ -22,7 +22,7 @@ $current_version = (file_exists("../public/version")) ? file_get_contents("../pu
 
 if (strcasecmp($latest_version, $current_version) != 0)
     $version_notification = "<b>&nbsp;Hinweis:</b> Es gibt eine neuere Programmversion: " . $latest_version .
-             ". <a href='../pages/upgrade.php'>&nbsp;&nbsp;<b>==&gt; AKTUALISIEREN</a></b>.";
+             ". <a href='../pages/ec_upgrade.php'>&nbsp;&nbsp;<b>==&gt; AKTUALISIEREN</a></b>.";
 else
     $version_notification = "&nbsp;Ihr efaCloud Server ist auf dem neuesten Stand.";
 
@@ -34,8 +34,8 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 $verified_user = $socket->find_record_matched($toolbox->users->user_table_name, 
         [$toolbox->users->user_id_field_name => $_SESSION["User"][$toolbox->users->user_id_field_name]
         ]);
-$rolle = (strcasecmp($verified_user["Rolle"], $_SESSION["User"]["Rolle"]) !== 0) ? "<b>, angemeldet als " .
-         $_SESSION["User"]["Rolle"] . "</b>" : "";
+$short_home = (strcasecmp($_SESSION["User"]["Rolle"], "admin") != 0) &&
+         (strcasecmp($_SESSION["User"]["Rolle"], "board") != 0);
 ?>
 
 <!-- START OF content -->
@@ -52,35 +52,21 @@ echo "<tr><td><b>Rolle</b></td><td>" . $verified_user["Rolle"] . "</td></tr>\n";
 echo "</table>";
 if (strcasecmp($verified_user["Rolle"], "bths") == 0)
     echo '<h3><a href="../pages/bths.php">Zum Fahrtenbuch...</a></h3>';
-echo "<p>" . $version_notification . "</p>";
+if (! $short_home)
+    echo "<p>" . $version_notification . "</p>";
 
 ?>
 	<h4>Boote unterwegs</h4>
 	<iframe src="../public/info.php?type=onthewater&mode=7"
 		title="Boote auf dem Wasser" style="width: 100%; border: none"></iframe>
 <?php
-// see also: "../classes/sec_concept.php"
-$clients = scandir("../log/lra");
-$active_clients = "";
-foreach ($clients as $client) {
-    if (($client != ".") && ($client != "..")) {
-        $client_record = $socket->find_record("efaCloudUsers", "efaCloudUserID", $client);
-        if ($client_record !== false) {
-            $active_clients .= "<p>" . $client_record["Vorname"] . " " . $client_record["Nachname"] . " (#" .
-                     $client_record["efaCloudUserID"] . ", " . $client_record["Rolle"] .
-                     "), letzte Aktivität: " . file_get_contents("../log/lra/" . $client) . "</p>";
-            $is_boathouse = (strcasecmp($client_record["Rolle"], "bths") == 0);
-            if (file_exists("../log/contentsize/" . $client) && $is_boathouse)
-                $active_clients .= "<table><tr><td>" . str_replace("\n", "</td></tr><tr><td>", 
-                        str_replace(";", "</td><td>", 
-                                trim(file_get_contents("../log/contentsize/" . $client)))) . "</td></tr></table>";
-        }
-    }
-}
-?>
-	<h4>Aktive Clients</h4>
-	<p><?php echo $active_clients; ?>
-  </p>
+if (! $short_home) {
+    include_once "../classes/efa_config.php";
+    $efa_config = new Efa_config($toolbox);
+    echo "<h4>Aktive Clients</h4><p>" . $efa_config->get_last_accesses_API($socket, true, true) . "</p>";
+    ?>
 </div>
 <?php
+} else
+    echo "<p>Um Deine Fahrten einzusehen, nutze bitte efaWeb, Umstieg siehe Menü links.</p>";
 end_script();

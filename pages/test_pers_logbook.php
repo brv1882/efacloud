@@ -16,10 +16,8 @@ if (! isset($user_mailto["EMail"]))
             $user_requested_file);
 
 // create mails to user. Prepare logbook.
-include_once '../classes/efa_dataedit.php';
-$efa_dataedit = new Efa_dataedit($toolbox, $socket);
 include_once '../classes/efa_logbook.php';
-$efa_logbook = new Efa_logbook($toolbox, $socket, $efa_dataedit);
+$efa_logbook = new Efa_logbook($toolbox, $socket);
 $mails_sent = $efa_logbook->send_logbooks(true);
 if ($mails_sent > 0)
     $info = "<p>Versand an $mails_sent Adressse erfolgreich.</p>";

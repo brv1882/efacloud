@@ -15,7 +15,6 @@ include_once '../classes/tfyh_form.php';
 // ===== a dummy for a password which is not the right one. Must nevertheless be a valid one to
 // pass all checks further down.
 $keep_password = "keuk3HVpxHASrcRn6Mpf";
-$new_user_indicator_password_hash = "aBN6HEzAH8pP83etSIAxWA28eSze";
 
 // This page requires an id to be set for the user to update. If not set, or the id is 0, a new user will be
 // created.
@@ -32,10 +31,11 @@ else {
         $user_to_add["Vorname"] = "Vorname";
         $user_to_add["Nachname"] = "Nachname";
         $user_to_add["EMail"] = $default_email;
-        $user_to_add["Passwort_Hash"] = $new_user_indicator_password_hash;
+        $user_to_add["Passwort_Hash"] = "-"; // use empty hash as default
         $efaCloudUserID = $_SESSION["User"][$toolbox->users->user_id_field_name];
         $user_to_add["LastModified"] = strval(time()) . "000";
         $id_to_update = $socket->insert_into($efaCloudUserID, $toolbox->users->user_table_name, $user_to_add);
+        // set hash to identify user record later as new user record.
     } else
         $id_to_update = $empty_new_user["ID"];
     $_SESSION["getps"][$fs_id]["id"] = $id_to_update;
@@ -143,16 +143,21 @@ if ($done > 0) {
         // check $nutzer_to_update_after whether all values match validity criteria
         $info = "";
         $invalid = $toolbox->users->check_user_profile($nutzer_to_update_after);
-        if ($invalid)
+        if (strlen($invalid) > 0)
             $form_errors .= "Fehler bei der Überprüfung der Daten: " . $invalid;
         // set password to its hash value.
-        elseif (strcmp($keep_password, $entered_data["Passwort"]) !== 0)
-            if ((strcasecmp($user_to_update["Rolle"], "bths") == 0) ||
-                     (strcasecmp($user_to_update["Passwort_Hash"], $new_user_indicator_password_hash) == 0))
+        elseif (strcasecmp($entered_data['Passwort_delete'], "on") == 0) {
+            $nutzer_to_update_after["Passwort_Hash"] = "-";
+        } elseif (strcmp($keep_password, $entered_data["Passwort"]) !== 0) {
+            if ((strcasecmp($user_to_update["Rolle"], "bths") == 0) || $is_new_user)
                 $nutzer_to_update_after["Passwort_Hash"] = password_hash($entered_data['Passwort'], 
                         PASSWORD_DEFAULT);
             else
                 $info = "Das Kennwort kann nur für neue Nutzer und Nutzer mit der Rolle 'bths' gesetzt werden.<br>";
+        }
+        // Password shall be deleted
+        unset($nutzer_to_update_after["Passwort_Wdh"]);
+        unset($nutzer_to_update_after["Passwort_delete"]);
         
         // continue, if no errors were detected
         if (strlen($form_errors) == 0) {
@@ -163,15 +168,12 @@ if ($done > 0) {
                 if (isset($nutzer_to_update_after[$key]) && (strcmp($user_to_update[$key], 
                         $nutzer_to_update_after[$key]) !== 0) && (strcasecmp($key, "LastModified") !== 0)) {
                     $changed = true;
-                    $value_is_password = (strcmp($key, "Passwort_Hash") == 0);
-                    if ($value_is_password) {
+                    if (strcmp($key, "Passwort_Hash") == 0)
                         $info .= "Das Kennwort wurde geändert.<br>";
-                        $record[$key] = password_hash($entered_data['Passwort'], PASSWORD_DEFAULT);
-                    } else {
+                    else
                         $info .= $key . " wurde geändert von '" . htmlspecialchars($user_to_update[$key]) .
                                  "' auf '" . htmlspecialchars($nutzer_to_update_after[$key]) . "'.<br>";
-                        $record[$key] = $nutzer_to_update_after[$key];
-                    }
+                    $record[$key] = $nutzer_to_update_after[$key];
                 }
             }
         }
@@ -208,6 +210,19 @@ if (isset($form_filled) && ($todo == $form_filled->get_index())) {
         $user_to_update["Passwort"] = $keep_password;
         $user_to_update["Passwort_Wdh"] = $keep_password;
         $form_to_fill->preset_values($user_to_update);
+        // auto-fill-in of PersonId
+        if (! isset($user_to_update["PersonId"]) || (strlen($user_to_update["PersonId"]) < 30)) {
+            // check name. If a person with the same name exists, add the PersonId.
+            $matching = ["FirstName" => $user_to_update["Vorname"],
+                    "LastName" => $user_to_update["Nachname"]
+            ];
+            $persons_with_same_name = $socket->find_records_sorted_matched("efa2persons", $matching, 1, "=", 
+                    "InvalidFrom", false);
+            if ($persons_with_same_name !== false) {
+                $person_id = (count($persons_with_same_name) == 1) ? $persons_with_same_name[0]["Id"] : "[mehrere Möglichkeiten]";
+                $form_to_fill->preset_value("PersonId", $person_id);
+            }
+        }
     }
 }
 
@@ -224,22 +239,49 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 <div class="w3-container">
 <?php
 if ($is_new_user) {
-    echo "<h3>Den neuen Nutzer mit der ID " . $id_to_update . " anlegen</h3>";
-    echo "<p>Hier können Sie das Profil des neuen Nutzers eingeben.</p>";
+    echo "<h3>Einen neuen efaCloud-Nutzer<sup class='eventitem' id='showhelptext_NutzerUndBerechtigungen'>&#9432;</sup> mit der ID " .
+             $id_to_update . " anlegen</h3>";
+    echo "<p>Hier können Sie das Profil des neuen Nutzers eingeben, der dann anschließend in der Dtenbank angelegt wird.</p>";
 } else {
-    echo "<h3>Das Profil von " . $user_name_display . " ändern</h3>";
+    echo "<h3>Das Profil von " . $user_name_display .
+             " ändern<sup class='eventitem' id='showhelptext_NutzerUndBerechtigungen'>&#9432;</sup></h3>";
     echo "<p>Hier können Sie das Profil des Nutzers ändern.</p>";
 }
-?> 
+?>
+	<ol>
+		<li>Ein efaCloud-Nutzer kann eine Person oder ein technischer Nutzer
+			(= ein Automat/PC) sein, also zum Beispiel der Bootshaus-PC.</li>
+		<li>Die Benutzer haben eine numerische efaCludUserID, die für den
+			login auf dem Server verwendet wird. Beispiel: efaCloudUserID '1142'
+			für 'Alex Admin'. Man legt sie fest mit der Option: 'Profil ändern'</li>
+		<li>Die Berechtigungen für efaCloud-Nutzer werden über Rollen
+			festglegt. Die möglichen Rollen sind: admin = (Verwalter) kann alles
+			ändern, insbesondere auch Nutzerdaten; board = (Vorstand) kann alles
+			sehen, aber keine Nutzerdaten ändern; bths = (Bootshaus) kann das
+			ändern, was ein Bootshaus-PC ändern können muss; member = (Mitglied),
+			bisher nicht ausgeprägt; anonymous = (Anonym) keine Rechte.</li>
+		<li>Die efaCloud-Nutzer können auch eine efa-Admin-Berechtigung
+			zugewiesen bekommen, ihre Rechte werden dann im Server genauso wie im
+			efa-PC eingstellt und wirken auf alle efa-PC, die mit dem Server
+			verbunden sind. Zu diesem Zweck wird dem efaCloud-Nutzer ein
+			efa-Admin-Name zugeordnet. Dieser kann für den Admin-login im
+			angeschlossenen efa-PC verwendet werden. Beispiel 'alexa' für 'Alex
+			Admin'. Die efa-Admin-Berechtigungen legt man fest mit der Option
+			'efa Admin-Berechtigungen ändern'.</li>
+	</ol>
+
 </div>
 
 <div class="w3-container">
 <?php
 
 echo $toolbox->form_errors_to_html($form_errors);
-echo $form_to_fill->get_html($fs_id);
+echo $form_to_fill->get_html();
 
 if ($todo == 1) { // step 1. No special texts for output
+    if (strcmp($_SESSION["User"]["Rolle"], $toolbox->users->useradmin_role) == 0)
+        echo "<br><a href='../pages/datensatz_loeschen.php?table=efaCloudUsers&ID=" . $user_to_update["ID"] .
+                 "' style='float:left;'>Datensatz ENDGÜLTIG löschen</a>";
     echo '<h5><br />Ausfüllhilfen</h5><ul>';
     echo $form_to_fill->get_help_html();
     echo "</ul>";

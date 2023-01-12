@@ -21,7 +21,7 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 	<h2>Profil von <?php
 echo $_SESSION["User"][$toolbox->users->user_firstname_field_name] . " " .
          $_SESSION["User"][$toolbox->users->user_lastname_field_name]?></h2>
-	<h3>Das sind die von Ihnen gespeicherten persönlichen Daten</h3>
+	<h3>Das sind die von Dir gespeicherten persönlichen Daten</h3>
 </div>
 <div class="w3-container">
 

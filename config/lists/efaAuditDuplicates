@@ -1,8 +1,8 @@
 id;permission;name;select;from;where;options
 1;bths;audit_boatdamages;Damage,BoatId,ecrid;efa2boatdamages;NOT(`LastModification` = 'delete');
-2;bths;audit_boatreservations;Reservation,BoatId,ecrid;efa2reservations;NOT(`LastModification` = 'delete');
+2;bths;audit_boatreservations;Reservation,BoatId,ecrid;efa2boatreservations;NOT(`LastModification` = 'delete');
 3;bths;audit_boats;Id,Name,ecrid;efa2boats;NOT(`LastModification` = 'delete');
-4;bths;audit_boatstatus;Id,ecrid;efa2boatstatus;NOT(`LastModification` = 'delete');
+4;bths;audit_boatstatus;BoatId,ecrid;efa2boatstatus;NOT(`LastModification` = 'delete');
 5;bths;audit_crews;Id,Name,ecrid;efa2crews;NOT(`LastModification` = 'delete');
 6;bths;audit_destinations;Id,Name,ValidFrom,InvalidFrom,ecrid;efa2destinations;NOT(`LastModification` = 'delete');
 7;bths;audit_groups;Id,Name,ValidFrom,InvalidFrom,ecrid;efa2groups;NOT(`LastModification` = 'delete');

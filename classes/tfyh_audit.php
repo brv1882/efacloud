@@ -18,7 +18,7 @@ class Tfyh_audit
 
     /**
      * public Constructor. Constructing the Audit class will rn all standard audit tasks
-     * 
+     *
      * @param Tfyh_toolbox $toolbox
      *            Common toolbox of application
      * @param Tfyh_socket $socket
@@ -51,13 +51,14 @@ class Tfyh_audit
         $audit_log .= "Forbidden directories access check ...\n";
         $changed = 0;
         foreach ($forbidden_dirs as $forbidden_dir) {
-            if (fileperms("../" . $forbidden_dir) != 0700) {
+            $forbidden_dir = trim($forbidden_dir); // line breaks in settings_tfyh may cause blank insertion
+            if (file_exists("../" . $forbidden_dir) && (fileperms("../" . $forbidden_dir) != 0700)) {
                 $audit_log .= "    file permissons for " . $forbidden_dir . ": " .
                          $this->permissions_string(fileperms("../" . $forbidden_dir)) . ".\n";
                 chmod("../" . $forbidden_dir, 0700);
             }
             $htaccess_filename = "../" . $forbidden_dir . "/.htaccess";
-            if (! file_exists($htaccess_filename)) {
+            if (file_exists("../" . $forbidden_dir) && ! file_exists($htaccess_filename)) {
                 $changed ++;
                 file_put_contents($htaccess_filename, "deny for all");
                 $audit_warnings = "    Missing " . $htaccess_filename . " added.\n";
@@ -105,7 +106,7 @@ class Tfyh_audit
         $cfg = $this->toolbox->config->get_cfg();
         foreach ($cfg as $key => $value) {
             if ((strcasecmp($key, "db_up") == 0) || (strcasecmp($key, "db_user") == 0))
-                $audit_log .= "    " . $key . " = " . strlen($value) . " characters long.\n";
+                $audit_log .= "    " . $key . " = " . mb_strlen($value) . " characters long.\n";
             else
                 $audit_log .= "    " . $key . " = " . json_encode($value) . "\n";
         }
@@ -163,8 +164,33 @@ class Tfyh_audit
         $audit_log .= "    " . $backup_files_count . " backup files with a total size of " .
                  (intval($backup_files_size / 1024 / 102) / 10) . " MByte\n";
         
+        // add application configuration dump for efaCloud
+        if (file_exists("../classes/efa_config.php")) {
+            include_once "../classes/efa_config.php";
+            $efa_config = new Efa_config($this->toolbox);
+            $audit_log .= "Configuration Dump:\n";
+            $audit_log .= $efa_config->display_array_text($this->toolbox->config->get_cfg(), "  ");
+        }
+        
+        // add clients configuration dump
+        $audit_log .= "Client Configurations:\n";
+        $clients = scandir("../uploads");
+        $indent0 = "      ";
+        foreach ($clients as $user_id) {
+            if (is_numeric($user_id)) {
+                $audit_log .= "  efaCloudUserID: " . $user_id . "\n";
+                $efa_config->parse_client_config(intval($user_id));
+                $efa_config->load_efa_config(intval($user_id));
+                $audit_log .= "    project:\n";
+                $audit_log .= $efa_config->display_array_text($efa_config->project, $indent0) . "\n";
+                $audit_log .= "    types:\n";
+                $audit_log .= $efa_config->display_array_text($efa_config->types, $indent0) . "\n";
+            }
+        }
+        
         // Finish
         $audit_log .= "Audit completed.\n";
+        
         file_put_contents("../log/app_audit.log", $audit_log);
         if (strlen($audit_warnings) > 0)
             file_put_contents("../log/audit.warnings", $audit_warnings);
@@ -175,7 +201,7 @@ class Tfyh_audit
     /**
      * Provide a readable String for the file permissions, see:
      * https://www.php.net/manual/de/function.fileperms.php
-     * 
+     *
      * @param int $perms            
      * @return string
      */

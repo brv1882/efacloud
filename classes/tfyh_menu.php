@@ -35,14 +35,14 @@ class Tfyh_menu
      * HTML snippet at start of level 2 item.
      */
     private $html_item_l2 = '<div class="w3-bar-block w3-hide w3-medium subMenu{parent}">' . "\n" .
-             '<a{href} class="w3-bar-item w3-bar-item-2 menuitem" id="{id}" ' . '{onclick}{hidden}>{headline}</a>' .
-             "\n" . '</div>' . "\n";
+             '<a{href} class="w3-bar-item w3-bar-item-2 menuitem" id="{id}" ' .
+             '{onclick}{hidden}>{headline}</a>' . "\n" . '</div>' . "\n";
 
     /**
      * HTML snippet at end of menu
      */
     private $html_menu_end = '<footer class="w3-small w3-center" id="footer">' .
-             '<br><br><br>##user##<br>##version##<br>##copyright##</footer></div>' . "\n" .
+             '<br><br>##user##<br>##version##<br>##copyright##<br>##applogo##<br>&nbsp;</footer></div>' . "\n" .
              "<!--============================== menu - end ===========================-->" . "\n";
 
     /**
@@ -117,9 +117,14 @@ class Tfyh_menu
                  $_SESSION["User"]["Rolle"] . ")" : "";
         $version = $toolbox->config->app_info["version_string"];
         $copyright = $toolbox->config->app_info["copyright"];
+        $applogo = $toolbox->config->app_info["applogo"];
         $this->html_menu_end = str_replace("##user##", $username, $this->html_menu_end);
-        $this->html_menu_end = str_replace("##version##", $version, $this->html_menu_end);
-        $this->html_menu_end = str_replace("##copyright##", $copyright, $this->html_menu_end);
+        if ($version)
+            $this->html_menu_end = str_replace("##version##", $version, $this->html_menu_end);
+        if ($copyright)
+            $this->html_menu_end = str_replace("##copyright##", $copyright, $this->html_menu_end);
+        if ($applogo)
+            $this->html_menu_end = str_replace("##applogo##", $applogo, $this->html_menu_end);
     }
 
     /**
@@ -259,7 +264,6 @@ class Tfyh_menu
         $l = 1;
         $close_list = "";
         $l1_i = 0;
-        
         foreach ($this->menu_def_array as $item) {
             $id = $item["id"];
             if ($item["level"] === 2) {

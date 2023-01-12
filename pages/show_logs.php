@@ -18,7 +18,7 @@ if (isset($_GET["type"]))
 else
     $type = "info";
 
-$selection = "";
+$selection = "<div class='w3-row'>";
 $available_logs = $toolbox->config->settings_tfyh["logger"]["logs"];
 $categories_to_show = ["api" => "Anbindung","app" => "Serveranwendung","debug" => "Fehlersuche",
         "sys" => "Systemmeldungen"
@@ -36,21 +36,22 @@ foreach ($available_logs as $available_log) {
 }
 
 foreach ($categories_to_show as $category_to_show => $category_display) {
-    $heading = "<h5>" . $category_display . "<h5><p>";
+    $heading = "<div class='w3-col l4'><h5>" . $category_display . "<h5><p>";
     $files_found = "";
     foreach ($types_to_show as $type_to_show => $type_display) {
         $filename = "../log/" . $category_to_show . "_" . $type_to_show . ".log";
         if (file_exists($filename))
             $files_found .= "<a href='?category=" . $category_to_show . "&type=" . $type_to_show .
-                     "' class='formbutton'>" . $type_display . "</a>&nbsp;&nbsp;";
+                     "' class='formbutton'>" . $type_display . "</a><br><br>";
     }
     if (strlen($files_found) > 0)
-        $selection .= $heading . $files_found . "</p>";
+        $selection .= $heading . $files_found . "</p></div>";
 }
+$selection .= "</div>";
 
 $log = "<h4>" . $categories_to_show[$category] . ", " . $types_to_show[$type] . "</h4>";
 $filename = "../log/" . $category . "_" . $type . ".log";
-$log = "<h4>" . $filename . "</h4><code>";
+$log .= "<h4>" . $filename . "</h4><code>";
 if (! file_exists($filename))
     $log .= "Datei nicht vorhanden.";
 else
@@ -70,9 +71,7 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 		Alles was die Anwendung protokolliert hat. Die dargestellte
 		Information kan persönliche Daten enthalten und darf nur im geregelten
 		Zweck verwendet werden.</p>
-	<h4>Vorhandene Logs</h4>
 	<div class='w3-row' style='padding: 10px;'><?php echo $selection; ?></div>
-	<h4>Ausgewählter Log</h4>
 	<div class='w3-row' style='padding: 10px;'><?php echo $log; ?></div>
 	<!-- END OF Content -->
 </div>

@@ -26,6 +26,11 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 
 echo $toolbox->users->get_all_accesses($socket);
 
+echo "<h4>Berechtigungen je Rolle</h4>";
+$menu_file_path = "../config/access/imenu";
+$audit_menu = new Tfyh_menu($menu_file_path, $toolbox);
+echo $audit_menu->get_allowance_profile_html($menu_file_path);
+
 ?>
 </div>
 <div class="w3-container">

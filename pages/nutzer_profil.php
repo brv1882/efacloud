@@ -53,7 +53,7 @@ echo $toolbox->users->get_user_profile_on_ID($user_to_show["ID"], $socket, false
 echo "<p><b>Für diesen Nutzer stehen die folgenden Aktionen zur Verfügung (bitte auf den Link klicken):</b><br>";
 $_SESSION["search_result"] = [];
 $_SESSION["search_result"][1] = $user_to_show;
-$_SESSION["search_result"]["tablename"] = "efaCöloudUsers";
+$_SESSION["search_result"]["tablename"] = "efaCloudUsers";
 
 echo $toolbox->users->get_action_links($user_id) . "<a href='../pages/show_history.php?searchresultindex=1'> - Versionsverlauf</a></p>";
 ?>

@@ -14,6 +14,7 @@ include_once '../classes/tfyh_form.php';
 // if validation fails, the same form will be displayed anew with error messgaes
 $todo = ($done == 0) ? 1 : $done;
 $form_errors = "";
+$info = "";
 $form_layout = "../config/layouts/configparameter_aendern";
 
 // ======== Start with form filled in last step: check of the entered values.
@@ -27,16 +28,11 @@ if ($done > 0) {
     if (strlen($form_errors) > 0) {
         // do nothing. This avoids any change, if form errors occured.
     } elseif ($done == 1) {
-        // write settings
-        $settings_path = "../config/settings";
-        $cfgStr = serialize($entered_data);
-        $cfgStrBase64 = base64_encode($cfgStr);
-        $info = "<p>" . $settings_path . '_app wird geschrieben ... ';
-        $byte_cnt = file_put_contents($settings_path . "_app", $cfgStrBase64);
-        $info .= $byte_cnt . " Bytes.</p>";
-        $todo = $done + 1;
-        // refresh settings immediately
+        // write configuration
+        $info .= $toolbox->config->store_app_config($entered_data);
+        // reload written configuration
         $toolbox->config->load_app_configuration();
+        $todo = $done + 1;
     }
 }
 
@@ -72,7 +68,7 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 
 echo $toolbox->form_errors_to_html($form_errors);
 if ($todo == 1) {
-    echo $form_to_fill->get_html($fs_id);
+    echo $form_to_fill->get_html();
     echo '<h5><br />Ausfüllhilfen</h5><ul>';
     echo $form_to_fill->get_help_html();
     echo "</ul>";

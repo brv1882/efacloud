@@ -51,6 +51,11 @@ class Tfyh_list
     private $columns;
 
     /**
+     * an array of all data types per column of this list
+     */
+    private $data_types;
+
+    /**
      * an array of all compounds of this list. A compound is a String with replaceble elements to provide a
      * summary information on a data record within a single String.
      */
@@ -296,7 +301,13 @@ class Tfyh_list
                 $this->compounds[$cname] = $cexpr;
                 $this->columns[] = $cname;
             } elseif (strlen($column) > 0) {
-                $this->columns[] = $column;
+                if (strpos($column, ":") !== false) {
+                    $this->columns[] = explode(":", $column, 2)[0];
+                    $this->data_types[] = explode(":", $column, 2)[1];
+                } else {
+                    $this->columns[] = $column;
+                    $this->data_types[] = false;
+                }
                 if (strcasecmp($column, $this->firstofblock) == 0)
                     $this->firstofblock_col = $c;
             }
@@ -367,7 +378,7 @@ class Tfyh_list
                 $this->maxrows = intval($option_pair[1]);
             if (strcasecmp("link", $option_pair[0]) === 0) {
                 $this->record_link_col = explode(":", $option_pair[1])[0];
-                $this->record_link = explode(":", $option_pair[1])[1];
+                $this->record_link = urldecode(explode(":", $option_pair[1])[1]);
             }
         }
     }
@@ -410,7 +421,7 @@ class Tfyh_list
                     else
                         $order_by .= "`" . $this->table_name . "`.`" . $osort . "`" . $sortmode;
                 }
-                $order_by = substr($order_by, 0, strlen($order_by) - 1);
+                $order_by = mb_substr($order_by, 0, mb_strlen($order_by) - 1);
             }
         }
         
@@ -431,7 +442,7 @@ class Tfyh_list
         $join_statement = ""; // special case: Inner Join using the
                               // $this->toolbox->users->user_id_field_name
         foreach ($this->columns as $column) {
-            // get all cloumns except compound expressions
+            // get all columns except compound expressions
             if (! isset($this->compounds[$column])) {
                 if (strpos($column, ">") !== false) {
                     // lookup case
@@ -450,7 +461,7 @@ class Tfyh_list
                 }
             }
         }
-        $sql_cmd = substr($sql_cmd, 0, strlen($sql_cmd) - 2);
+        $sql_cmd = mb_substr($sql_cmd, 0, mb_strlen($sql_cmd) - 2);
         $sql_cmd .= " FROM `" . $this->table_name . "`" . $join_statement . $where . $order_by . $limit;
         return $sql_cmd;
     }
@@ -480,8 +491,9 @@ class Tfyh_list
         $list_html = "";
         if (! $short) {
             $list_html .= "Sortieren mit einem Klick auf den Spaltenkopf (nur teilweise), Wechsel per 2. Klick von aufsteigend zu absteigend. \n";
-            $list_html .= "Details ansehen und ggf. ändern mit Klick aud den Eintrag in der Spalte '" .
-                     $this->record_link_col . "'.\n";
+            if (strlen($this->record_link_col) > 0)
+                $list_html .= "Details ansehen und ggf. ändern mit Klick auf den Eintrag in der Spalte '" .
+                         $this->record_link_col . "'.\n";
         }
         $list_html .= "<div style='overflow-x: auto; white-space: nowrap; margin-top:12px; margin-bottom:10px;'>";
         $list_html .= "<table style='border: 2px solid transparent;'><thead><tr>";
@@ -525,12 +537,14 @@ class Tfyh_list
         $sql_cmd = $this->build_sql_cmd($osorts_list, $ofilter, $ofvalue);
         
         $res = $this->socket->query($sql_cmd);
-        $res_count_rows = $res->num_rows;
+        $res_count_rows = ($res === false) ? 0 : $res->num_rows;
         if (! $short)
             $list_html = (($res_count_rows) ? "<b>" . $res_count_rows . " Datensätze gefunden.</b> " : "<b>keine Datensätze gefunden.</b> ") .
                      $list_html;
         if (intval($res_count_rows) > 0)
             $row_db = $res->fetch_row();
+        else
+            $row_db = false;
         $has_compounds = (count($this->compounds) > 0);
         $row_count = 0;
         
@@ -541,9 +555,22 @@ class Tfyh_list
             $data_cnt = 0;
             $set_id = "0";
             foreach ($row as $data) {
+                $column = $this->columns[$data_cnt];
                 $link_user_id = (strcasecmp($this->table_name, $this->toolbox->users->user_table_name) == 0) && (strcasecmp(
-                        $this->columns[$data_cnt], $this->toolbox->users->user_id_field_name) == 0);
-                $is_record_link_col = (strcasecmp($this->columns[$data_cnt], $this->record_link_col) == 0);
+                        $column, $this->toolbox->users->user_id_field_name) == 0);
+                $is_record_link_col = (strcasecmp($column, $this->record_link_col) == 0);
+                if ($this->data_types[$data_cnt] && (strlen($data) > 0)) {
+                    if (strcasecmp($this->data_types[$data_cnt], "d") == 0)
+                        $data = date("d.m.Y", strtotime($data));
+                    elseif (strcasecmp($this->data_types[$data_cnt], "dt") == 0)
+                        $data = date("d.m.Y H:i:s", strtotime($data));
+                    elseif (strcasecmp($this->data_types[$data_cnt], "f") == 0)
+                        $data = str_replace(".", ",", strval($data));
+                    elseif (strcasecmp($this->data_types[$data_cnt], "p") == 0)
+                        $data = str_replace(".", ",", strval($data * 100)) . "%";
+                    elseif (strcasecmp($this->data_types[$data_cnt], "u") == 0)
+                        $data = date("d.m.Y H:i:s", intval($data));
+                }
                 if ($link_user_id) {
                     $row_str .= "<td><b><a href='../pages/nutzer_profil.php?nr=" . $data . "'>" . $data .
                              "</a></b></td>";
@@ -602,6 +629,16 @@ class Tfyh_list
                      "geregelten Zweck. Eine Weitergabe von hier exportierten Listen ist nicht gestattet.</p>";
         }
         return $list_html;
+    }
+
+    /**
+     * Get the sql-code which is used to retreive the rows. Only for debugging purposes.
+     * 
+     * @return string
+     */
+    public function get_sql ()
+    {
+        return $this->build_sql_cmd($this->osorts_list, $this->ofilter, $this->ofvalue);
     }
 
     /**
@@ -704,7 +741,7 @@ class Tfyh_list
         if (! $csv)
             return false;
         
-        $csv = substr($csv, 0, strlen($csv) - 1) . "\n";
+        $csv = mb_substr($csv, 0, mb_strlen($csv) - 1) . "\n";
         // assemble SQL-statement and read data
         $rows = $this->get_rows();
         $last_checked = null;
@@ -725,7 +762,7 @@ class Tfyh_list
             // pass the first only for a specific id, think of below condition in negative for those
             // dropped.
             if (($check_col_pos != $c) || is_null($last_checked) || (strcmp($data, $last_checked) != 0))
-                $csv .= substr($row_str, 0, strlen($row_str) - 1) . "\n";
+                $csv .= mb_substr($row_str, 0, mb_strlen($row_str) - 1) . "\n";
         }
         return $csv;
     }

@@ -61,7 +61,7 @@ if (! isset($_GET["upgrade"])) {
     $ref_config = ["bz2","calendar","Core","ctype","curl","date","dom","exif","fileinfo",
             "filter","ftp","gd","gettext","hash","iconv","json","libxml","mbstring","mysqli",
             "openssl","pcre","pdo_mysql","PDO","Phar","posix","Reflection","session","SimpleXML",
-            "sockets","SPL","standard","tokenizer","xml","xmlreader","xmlwriter","xsl","zip","zlib"
+            "SPL","standard","tokenizer","xml","xmlreader","xmlwriter","xsl","zip","zlib"
     ];
     $this_config = get_loaded_extensions();
     $missing = [];

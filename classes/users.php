@@ -59,6 +59,10 @@ class Users extends Tfyh_user
         else
             return $this->get_user_profile_on_array($user_to_read, $socket, $short);
     }
+    
+    private function set_name_of_logbook_concession(String $user_concessions) {
+        
+    }
 
     /**
      * Provide an html table with all stored data of the user.
@@ -96,7 +100,7 @@ class Users extends Tfyh_user
                 elseif (strcasecmp($key, "Workflows") === 0)
                     $html_str .= $this->get_user_services("workflows", $key, $value);
                 elseif (strcasecmp($key, "Concessions") === 0)
-                    $html_str .= $this->get_user_services("workflows", $key, $value);
+                    $html_str .= $this->get_user_services("concessions", $key, $value);
                 else
                     $html_str .= "<tr><td><b>" . $key . "</b>&nbsp;&nbsp;&nbsp;</td><td>" . $value .
                              "</td></tr>\n";

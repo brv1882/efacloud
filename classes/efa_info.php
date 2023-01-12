@@ -85,7 +85,7 @@ class Efa_info
                 $html .= "<th>";
                 for ($c = 0; $c < count($table[0]); $c ++)
                     $html .= $table[0][$c] . ", ";
-                $html = substr($html, 0, strlen($html) - 2);
+                $html = mb_substr($html, 0, mb_strlen($html) - 2);
                 $html .= "</th>";
             } else
                 for ($c = 0; $c < count($table[0]); $c ++)
@@ -130,11 +130,11 @@ class Efa_info
                 for ($c = 0; $c < count($table[0]); $c ++)
                     $csv .= $table[0][$c] . ", ";
                 $csv = $this->toolbox->encode_entry_csv($csv);
-                $csv = substr($csv, 0, strlen($csv) - 2) . "\n";
+                $csv = mb_substr($csv, 0, mb_strlen($csv) - 2) . "\n";
             } else {
                 for ($c = 0; $c < count($table[0]); $c ++)
                     $csv .= $this->toolbox->encode_entry_csv($table[0][$c]) . ";";
-                $csv = substr($csv, 0, strlen($csv) - 1) . "\n";
+                $csv = mb_substr($csv, 0, mb_strlen($csv) - 1) . "\n";
             }
         }
         for ($r = 1; $r < count($table); $r ++) {
@@ -143,14 +143,14 @@ class Efa_info
                 for ($c = 0; $c < count($table[0]); $c ++)
                     $rowtxt .= $table[$r][$c] . ", ";
                 $rowtxt = $this->toolbox->encode_entry_csv($rowtxt);
-                $csv .= substr($rowtxt, 0, strlen($rowtxt) - 2) . "\n";
+                $csv .= mb_substr($rowtxt, 0, mb_strlen($rowtxt) - 2) . "\n";
             } else {
                 for ($c = 0; $c < count($table[0]); $c ++)
                     $csv .= $this->toolbox->encode_entry_csv($table[$r][$c]) . ";";
-                $csv = substr($csv, 0, strlen($csv) - 1) . "\n";
+                $csv = mb_substr($csv, 0, mb_strlen($csv) - 1) . "\n";
             }
         }
-        $csv = substr($csv, 0, strlen($csv) - 1);
+        $csv = mb_substr($csv, 0, mb_strlen($csv) - 1);
         return $csv;
     }
 
@@ -172,29 +172,31 @@ class Efa_info
         if ($boats_on_the_water !== false) {
             // gather all data into an array
             foreach ($boats_on_the_water as $boat_on_the_water) {
-                $trips = $this->socket->find_records("efa2logbook", "EntryId", $boat_on_the_water["EntryNo"], 
-                        10);
+                $matching = [ "EntryId" => $boat_on_the_water["EntryNo"], "Open" => "true" ];
+                $trips = $this->socket->find_records_sorted_matched("efa2logbook", $matching, 10, "=", "Date", false);
                 $boat = $this->socket->find_record("efa2boats", "Id", $boat_on_the_water["BoatId"]);
                 $boatname = (($boat != false) && isset($boat["Name"])) ? $boat["Name"] : "Fremdboot";
-                // $trips may contain entries from different logbooks, filter for the current ones.
-                foreach ($trips as $trip) {
-                    $destination = (isset($trip["DestinationId"])) ? $trip["DestinationId"] : $trip["DestinationName"];
-                    if (isset($trip["DestinationId"])) {
-                        $destination_record = $this->socket->find_record("efa2destinations", "Id", 
-                                $trip["DestinationId"]);
-                        $destination = (($destination_record != false) && isset($destination_record["Name"])) ? $destination_record["Name"] : "kein Ziel angegeben";
-                    } else
-                        $destination = $trip["DestinationName"];
-                    if (is_null($destination) || (strlen($destination) == 0))
-                        $destination = "-";
-                    // filter those of the current logbook by year
-                    if (strcmp(date("Y"), substr($trip["Date"], 0, 4)) == 0) {
-                        $start_time = (strcmp(date("Y-m-d"), $trip["Date"]) != 0) ? date("d.m.Y", strtotime($trip["Date"])) . " - " .
-                                 $trip["StartTime"] : $trip["StartTime"];
-                                 $table[] = [strval($trip["EntryId"]),$boatname,$start_time,$destination
-                        ];
+                // If by an error $trips contain entries from different logbooks, filter for the current one.
+                if ($trips !== false)
+                    foreach ($trips as $trip) {
+                        $destination = (isset($trip["DestinationId"])) ? $trip["DestinationId"] : $trip["DestinationName"];
+                        if (isset($trip["DestinationId"])) {
+                            $destination_record = $this->socket->find_record("efa2destinations", "Id", 
+                                    $trip["DestinationId"]);
+                            $destination = (($destination_record != false) &&
+                                     isset($destination_record["Name"])) ? $destination_record["Name"] : "kein Ziel angegeben";
+                        } else
+                            $destination = $trip["DestinationName"];
+                        if (is_null($destination) || (strlen($destination) == 0))
+                            $destination = "-";
+                        // filter those of the current logbook by year
+                        if (strcmp(date("Y"), substr($trip["Date"], 0, 4)) == 0) {
+                            $start_time = (strcmp(date("Y-m-d"), $trip["Date"]) != 0) ? date("d.m.Y", 
+                                    strtotime($trip["Date"])) . " - " . $trip["StartTime"] : $trip["StartTime"];
+                            $table[] = [strval($trip["EntryId"]),$boatname,$start_time,$destination
+                            ];
+                        }
                     }
-                }
             }
         }
         $table = $this->remove_unused_columns($table);
@@ -228,8 +230,9 @@ class Efa_info
         ];
         foreach ($boats_not_available as $boat_not_available) {
             $boat = $this->socket->find_record("efa2boats", "Id", $boat_not_available["BoatId"]);
+            $boat_valid = (strlen($boat["InvalidFrom"]) > 15);
             $boatname = (($boat != false) && isset($boat["Name"])) ? $boat["Name"] : "Fremdboot";
-            if (! isset($boats_shown[$boatname])) {
+            if ($boat_valid && ! isset($boats_shown[$boatname])) {
                 $table[] = [$boatname,$boat_not_available["CurrentStatus"],
                         $boat_not_available["BaseStatus"]
                 ];
@@ -300,15 +303,19 @@ class Efa_info
     {
         
         // get all damages which lead to a not usable boat
-        $damages_not_usable = $this->socket->find_records("efa2boatdamages", "Severity", "NOTUSEABLE", 100);
+        include_once "../classes/tfyh_list.php";
+        $damage_list = new Tfyh_list("../config/lists/efaWeb", 2, "efaWeb_boatdamages", $this->socket, 
+                $this->toolbox);
+        $damage_rows = $damage_list->get_rows();
         $boats_not_usable = [];
-        foreach ($damages_not_usable as $damage_not_usable) {
-            // filter those which have already been fixed
-            if (strcasecmp($damage_not_usable["Fixed"], "true") !== 0) {
-                $boat = $this->socket->find_record("efa2boats", "Id", $damage_not_usable["BoatId"]);
+        foreach ($damage_rows as $damage_row) {
+            $damage_record = $damage_list->get_named_row($damage_row);
+            // filter those which are NOTUSEABLE
+            if (strcasecmp($damage_record["Severity"], "NOTUSEABLE") == 0) {
+                $boat = $this->socket->find_record("efa2boats", "Id", $damage_record["BoatId"]);
                 if (! isset($boats_not_usable[$boat["Name"]]))
                     $boats_not_usable[$boat["Name"]] = [];
-                $boats_not_usable[$boat["Name"]][] = $damage_not_usable;
+                $boats_not_usable[$boat["Name"]][] = $damage_record;
             }
         }
         // list all boats with all damages.

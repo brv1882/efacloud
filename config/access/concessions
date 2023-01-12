@@ -5,7 +5,7 @@ ID;Name;Titel;Beschreibung;Flag
 4;MsgReadBoatMaintenance;Nachrichten an Bootswart lesen;;8
 5;MsgMarkReadBoatMaintenance;Nachrichten an Bootswart als gelesen markieren;;16
 6;MsgAutoMarkReadBoatMaintenance;Nachrichten an Bootswart automatisch als gelesen markieren;;32
-7;ewLogbookEntry;efaWeb: Fahrten in das aktuelle Fahrtenbuch eintragen;64
+7;ewLogbookEntryBths1;efaWeb: Fahrten in das Fahrtenbuch für Bootshaus #1 eintragen;;64
 8;ewMessageEntry;efaWeb: Nachrichten hinterlassen;;128
 9;ewDamageEntry;efaWeb: Schadensmeldungen abgeben;;256
 10;ewReservationEntry;efaWeb: Boote reservieren;;512
@@ -13,3 +13,6 @@ ID;Name;Titel;Beschreibung;Flag
 12;ewMessageView;efaWeb: Nachrichten lesen;;2048
 13;ewDamageView;efaWeb: Schadensmeldungen lesen;;4096
 14;ewReservationView;efaWeb: Reservierungen lesen;;8192
+15;ewLogbookEntryBths2;efaWeb: Fahrten in das Fahrtenbuch für Bootshaus #2 eintragen;;16384
+16;ewLogbookEntryBths3;efaWeb: Fahrten in das Fahrtenbuch für Bootshaus #3 eintragen;;32768
+17;ewLogbookEntryBths4;efaWeb: Fahrten in das Fahrtenbuch für Bootshaus #4 eintragen;;65536

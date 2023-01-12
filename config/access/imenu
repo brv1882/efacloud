@@ -1,35 +1,46 @@
 id;permission;headline;link
 publicHome;.anonymous;Startseite ;../public/index.php
 efaWeb;member;efaWeb ;../pages/efaWeb.php
-edit;board;efa Listen ;
-_edit_trips;board;Fahrten ;../pages/show_lists.php?satz=bearbeiten&id=3
-_edit_damage;board;Schadensmeldungen ;../pages/show_lists.php?satz=bearbeiten&id=1
-_edit_messages;board;Nachrichten ;../pages/show_lists.php?satz=bearbeiten&id=2
-_edit_reservations;board;Reservierungen ;../pages/show_lists.php?satz=bearbeiten&id=4
-_edit_viewrecord;.board;Datensatz anzeigen ;../pages/view_record.php
-logbook;board;efa Daten ;
-_logbook_find;board;efa Datensatz finden ;../forms/datensatz_finden.php
-_logbook_change;.board;Datensatz Versionen ;../pages/show_history.php
-_logbook_tableexp;board;efa Tabelle ausgeben ;../pages/show_lists.php?satz=efaExportTables
-_logbook_tableexp;board;efa Liste ausgeben ;../pages/show_lists.php?satz=efaExportLists
-_logbook_ipm_persons;admin;Personendaten importieren ;../forms/personen_importieren.php
-_logbook_testPersLogbook;admin;persönliches Fahrtenbuch testen ;../pages/test_pers_logbook.php
-administration;board;efaCloud verwalten ;
-_administration_Finden;board;efaCloud Nutzer finden ;../forms/nutzer_finden.php
-_administration_Anzeigen;.board;efaCloud Nutzer anzeigen ;../pages/nutzer_profil.php
-_administration_Aendern;.admin;efaCloud Nutzer ändern ;../forms/nutzer_aendern.php
-_administration_Workflows;.admin;efa Rechte ändern ;../forms/efa_rechte_aendern.php?type=efa
-_administration_Workflows;.admin;efaWeb Rechte ändern ;../forms/efa_rechte_aendern.php?type=efaWeb
-_administration_Anlegen;admin;efaCloud Nutzer anlegen ;../forms/nutzer_aendern.php?id=0
-_administration_Liste;board;efaCloud Liste ausgeben ;../pages/show_lists.php
-_administration_Archiv;.admin;efaCloud Archivdatensatz anzeigen ;../pages/view_archive_record.php
-_administration_logintoken;.admin;efaCloud Login token versenden ;../pages/logintoken_versenden.php
-_administration_cronjobs;admin;efaCloud Cron jobs durchführen ;../pages/run_cronjobs.php
-config;admin;efaCloud einstellen ;
-_config_settings;admin;Einstellungen ändern ;../forms/configparameter_aendern.php
-_config_colors;admin;Farbschema ändern ;../forms/farben_aendern.php
-_config_struktur;board;Datenstruktur ;../pages/datenstruktur.php
-_config_dbreset;admin;Datenbank neu aufsetzen ;../pages/db_reset.php
+list;board;Sportbetrieb ;
+_list_trips;board;Fahrten anzeigen ;../pages/show_lists.php?satz=bearbeiten&id=3
+_list_damage;board;Schadensmeldungen anzeigen ;../pages/show_lists.php?satz=bearbeiten&id=1
+_list_messages;board;Nachrichten anzeigen ;../pages/show_lists.php?satz=bearbeiten&id=2
+_list_reservations;board;Reservierungen anzeigen ;../pages/show_lists.php?satz=bearbeiten&id=4
+_list_viewrecord;.board;efa Datensatz anzeigen ;../pages/view_record.php
+efaDaten;board;efa Daten ;
+_efaDaten_new;board;efa Datensatz neu ;../pages/datensatz_neu.php
+_efaDaten_find;board;efa Datensatz finden ;../forms/datensatz_finden.php
+_efaDaten_delete;.admin;efa Datensatz löschen ;../pages/datensatz_loeschen.php
+_efaDaten_tableexp;board;efa Tabelle ausgeben ;../pages/show_lists.php?satz=efaExportTables
+_efaDaten_dbAudit;admin;Datenbank auditieren ;../pages/db_audit.php
+_efaDaten_importPersons;admin;Personendaten importieren ;../forms/personen_importieren.php
+_efaDaten_importSessions;admin;Fahrten importieren ;../forms/fahrten_importieren.php
+_efaDaten_Archivlisten;admin;Archivdaten anzeigen ;../pages/show_lists.php?satz=efaArchive&id=8
+_efaDaten_Papierkorb;admin;Papierkorb anzeigen ;../pages/show_lists.php?satz=efaArchive&id=10
+_efaDaten_Restore;admin;aus Archiv wiederherstellen ; ../forms/archiv_wiederherstellen.php
+_efaDaten_Archivdaten;.admin;Archivdatensatz anzeigen ;../pages/view_archive_record.php
+_efaDaten_Papierkorbdaten;.admin;Gelöschten Datensatz anzeigen ;../pages/view_trash_record.php
+_efaDaten_change;.board;efa Datensatz ändern ;../forms/datensatz_aendern.php
+efaConfig;bths;efa Einstellungen ;
+_efaConfig_clientSettings;bths;Client Einstellungen ansehen ;../pages/show_client_config.php
+_efaConfig_testPersLogbook;bths;persönliches Fahrtenbuch testen ;../pages/test_pers_logbook.php
+ecAdmin;board;efaCloud Nutzer ;
+_ecAdmin_Finden;board;Nutzer finden ;../forms/nutzer_finden.php
+_ecAdmin_Anlegen;admin;Nutzer anlegen ;../forms/nutzer_aendern.php?id=0
+_ecAdmin_Liste;board;Nutzer auflisten ;../pages/show_lists.php
+_ecAdmin_Anzeigen;.board;Nutzer anzeigen ;../pages/nutzer_profil.php
+_ecAdmin_Aendern;.admin;Nutzer ändern ;../forms/nutzer_aendern.php
+_ecAdmin_logintoken;.admin;efaCloud Login token versenden ;../pages/logintoken_versenden.php
+_ecAdmin_Workflows;.admin;efa-Rechte ändern ;../forms/efa_rechte_aendern.php?type=efa
+_ecAdmin_WorkflowsWeb;.admin;efaWeb-Rechte ändern ;../forms/efa_rechte_aendern.php?type=efaWeb
+_ecAdmin_change;.board;Datensatz Versionen ;../pages/show_history.php
+ecConfig;admin;efaCloud einstellen ;
+_ecConfig_settings;admin;Parameter ändern ;../forms/configparameter_aendern.php
+_ecConfig_colors;admin;Farbschema ändern ;../forms/farben_aendern.php
+_ecConfig_colors;admin;Vereinslogo ;../forms/logo_hochladen.php
+_ecConfig_cronjobs;admin;Wartungsroutinen durchführen (Geduld) ;../pages/run_cronjobs.php
+_ecConfig_struktur;admin;Datenstruktur anzeigen ;../pages/datenstruktur.php
+_ecConfig_dbreset;admin;Datenbank neu aufsetzen ;../pages/db_reset.php
 monitoring;admin;Überwachen ;
 _monitoring_Zugriffsstatistik;admin;Zugriffsstatistik ;../pages/show_actions.php
 _monitoring_Servermeldungen;admin;Servermeldungen ;../pages/show_logs.php
@@ -37,9 +48,9 @@ _monitoring_Clientmeldungen;.admin;Clientmeldungen ;../pages/show_logs_client.ph
 _monitoring_efaClientLogs;admin;Meldungen der Clients ;../forms/client_tx_statistics.php
 _monitoring_ApiStatisticsView;.admin;API Zugriffsstatistik ;../pages/client_tx_statistics.php
 _monitoring_Aenderungen;admin;Datenänderungen ;../pages/show_changes.php
-_monitoring_db_audit;admin;efaCloud Datenbank auditieren ;../pages/db_audit.php
+_monitoring_show_record;.board;Datensatz anzeigen ;../pages/getrecord.php
 _monitoring_Berechtigungen;admin;Alle Berechtigungen ;../pages/alle_berechtigungen.php
-_monitoring_sec_concept;admin;efaCloud Sicherheitskonzept ;../pages/sec_concept.php
+_monitoring_sec_concept;admin;efaCloud Datenschutzkonzept ;../pages/sec_concept.php
 amend;.admin;Daten bereinigen ;
 _amend_logbooks;.admin;Fahrtenbücher korrigieren ;../pages/show_logbooks.php
 _amend_delete_corrupt;.admin;korrupte, leere Datensätze löschen ;../pages/db_audit.php?delete_corrupt=yes

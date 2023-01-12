@@ -1,6 +1,7 @@
 tags;required;name;value;label;type;class;size;maxlength
 <div class='w3-row'><div class='w3-col l1'>;; \
-  _no_input;;Einloggen in den efaCloud-Server ist mit der hinterlegten E-Mail Adresse und dem zugehörigen Kennwort möglich.<br> \
+  _no_input;;Einloggen in den efaCloud-Server ist mit der efaCloud UserID oder alternativ dem efadmin-Namen bzw.  \
+  der hinterlegten E-Mail Adresse und dem zugehörigen Kennwort möglich.<br> \
   Zur Einrichtung der Nutzerkennung hilft in der Regel der Administrator des Fahrtenbuchs im Verein.<br><br>;;;;
 </div></div><div class='w3-row'><div class='w3-col l1'>;*; \
   Account;;Login = efaCloudUserID;text;;20;50

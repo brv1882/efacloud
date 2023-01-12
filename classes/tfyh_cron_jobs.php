@@ -27,27 +27,30 @@ class Tfyh_cron_jobs
         $today = date("Y-m-d");
         if (strcmp($time_last_run, $today) == 0)
             return false;
-            
+        
         // TODO temporarily inserted, remove later (insert @ 22.3.22)
         $migrate = ["dones.txt" => "app_info.log","warns.txt" => "app_warnings.log",
                 "fails.txt" => "app_errors.log","timestamps.log" => "sys_timestamps.log"
         ];
         foreach ($migrate as $src => $dest)
-            rename("../log/" . $src, "../log/" . $dest);
+            if (file_exists("../log/" . $src))
+                rename("../log/" . $src, "../log/" . $dest);
         // TODO temporarily inserted, remove later (insert @ 22.3.22)
         
         $cronlog = "../log/sys_cronjobs.log";
         $cron_started = time();
         $last_step_ended = $cron_started;
-        file_put_contents($cronlog, date("Y-m-d H:i:s") . " +0: Cronjobs started (time last run: $time_last_run)\n", FILE_APPEND);
+        file_put_contents($cronlog, 
+                date("Y-m-d H:i:s") . " +0: Cronjobs started (time last run: $time_last_run)\n", FILE_APPEND);
         
         // remove obsolete files in log directory from previous program versions or debug runs
         $toolbox->logger->remove_obsolete();
         $toolbox->logger->rotate_logs();
         $toolbox->logger->collect_and_cleanse_init_login_error_log();
         file_put_contents("../log/app_init_login_error.csv", $toolbox->logger->get_activities_csv(14));
-        file_put_contents($cronlog,
-                date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) . ": Log rotation and analysis completed\n", FILE_APPEND);
+        file_put_contents($cronlog, 
+                date("Y-m-d H:i:s") . " +" . (time() - $last_step_ended) .
+                         ": Log rotation and analysis completed\n", FILE_APPEND);
         $last_step_ended = time();
         
         // refresh timer as first action, to avoid duplicate triggering by

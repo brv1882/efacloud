@@ -1,0 +1,22 @@
+tags;required;name;value;label;type;class;size;maxlength
+<span id='vSpanSystemData'><div class='w3-row'><div class='w3-col l3'>;;Message;;Nachricht Nummer;text;display-bold;90%;36
+</div><div class='w3-col l3'>;;ecrid;;eindeutige Datensatz-Referenz (ecrid);text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l3'>;;LastModified;;zuletzt geändert am;text;display-bold;90%;20
+</div><div class='w3-col l3'>;;ChangeCount;;Version (Änderungszähler);text;display-bold;90%;20
+</div><div class='w3-col l3'>;;LastModification;;Art der letzten Änderung;text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l1'><hr>;;_no_input;; ;;;
+</div></div></span><div class='w3-row'><div class='w3-col l2'>;;Date;;Datum;date;;10;20
+</div><div class='w3-col l2'>;;Time;;Uhrzeit;text;;8;10
+</div></div><div class='w3-row'><div class='w3-col l2'>;;From;;Von;text;;90%;50
+</div><div class='w3-col l2'>;;ReplyTo;;Antwort an (Mail);text;;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;To;;An;"select UNDEFINED=;ADMIN=Administrator;BOATM=Bootswart";;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;Subject;;Betreff;text;;90%;50
+</div></div><div class='w3-row'><div class='w3-col l1'>;;Text;;Text;textarea;;4;
+</div></div><div class='w3-row'><div class='w3-col l2'><br>;;Read;;Gelesen;checkbox;;;
+</div><div class='w3-col l2'><br>;;ToBeMailed;;bitte als Mail versenden;checkbox;;;
+</div></div><div class='w3-row'><div class='w3-col l1'> <br>;;submit;Jetzt ändern;;submit;formbutton;;
+</div></div>;;_no_input;;;;;;
+<li><span class='helptext'>;;_help_text;;Die Datenänderung wirkt im efaCloud Server sofort, in angebundenen efa-PCs erst nach der nächsten Synchronisation.;;;;
+</span></li><li><span class='helptext'>;;_help_text;;Aus technischen Gründen wird das Formular bei fehlerhaften Angaben komplett zurückgesetzt.;;;;
+</span></li><li><span class='helptext'>;;_help_text;;Datensätze mit Art der letzten Änderung 'delete' können nicht mehr modifiziert werden.;;;;
+</span></li>;;_help_text;;;;;;

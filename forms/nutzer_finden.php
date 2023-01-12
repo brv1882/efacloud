@@ -1,8 +1,8 @@
 <?php
 /**
- * The form for user profile self service.
- * Based on the Tfyh_form class, please read instructions their to better understand this PHP-code part.
- *
+ * The form for user profile self service. Based on the Tfyh_form class, please read instructions their to
+ * better understand this PHP-code part.
+ * 
  * @author mgSoft
  */
 // ===== initialize toolbox and socket and start session.
@@ -45,7 +45,7 @@ if ($done > 0) {
                 if (isset($value) && (strlen($value) > 0))
                     $sql_cmd .= "`" . $key . "` LIKE '%" . $value . "%' OR ";
             }
-            $sql_cmd = substr($sql_cmd, 0, strlen($sql_cmd) - 4); // strip off last " OR "
+            $sql_cmd = mb_substr($sql_cmd, 0, mb_strlen($sql_cmd) - 4); // strip off last " OR "
         }
         // only proceed if something was entered.
         if (strlen($sql_cmd) > 0) {
@@ -89,12 +89,12 @@ if ($done > 0) {
     if ($todo == 2) {
         $i = 0;
         foreach ($nutzerliste as $users_to_show) {
-            $info = $users_to_show[$toolbox->users->user_id_field_name] . ": " . $users_to_show["Vorname"] . " " .
-                     $users_to_show["Nachname"] . ".";
+            $info = $users_to_show[$toolbox->users->user_id_field_name] . ": " . $users_to_show["Vorname"] .
+                     " " . $users_to_show["Nachname"] . ".";
             if (isset($users_to_show["key_matched"]))
                 $info .= " '<b>" . $entered_data["Volltextsuche"] . "</b>'" . $users_to_show["key_matched"] .
                          ", ";
-                $info .= $toolbox->users->get_action_links($users_to_show["ID"]);
+            $info .= $toolbox->users->get_action_links($users_to_show["ID"]);
             $users_to_show_html .= $info . "<br />";
             $i ++;
         }
@@ -124,9 +124,18 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 ?>
 <!-- START OF content -->
 <div class="w3-container">
-	<h3>Einen Nutzer finden</h3>
-	<p>Hier kannst Du einen Nutzer unter Angabe der efaCloudUserID oder
-		seines Vor oder Nachnamens finden.</p>
+	<h3>
+		Einen efaCloud-Nutzer<sup class='eventitem'
+			id='showhelptext_NutzerUndBerechtigungen'>&#9432;</sup> finden
+	</h3>
+	<p>Hier kannst Du einen efaCloud-Nutzer unter Angabe der efaCloudUserID
+		oder seines Vor oder Nachnamens finden. Menschen, die Fahrten
+		durchführen, sind in der efa-Tabelle für Personen gespeichert.</p>
+	<p>
+		<b>Diese Seite ist die Einstiegsseite für jede Form der
+			Nutzerbearbeitung.</b> Die Anzeige- und Bearbeitungs-Optionen werden
+		als Links im Ergebnis der Suche dargestellt.
+	</p>
 </div>
 
 <div class="w3-container">
@@ -135,12 +144,12 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 echo $toolbox->form_errors_to_html($form_errors);
 if ($todo < 2)
     echo $form_to_fill->get_html();
-    else
-        echo $users_to_show_html;
-        echo '<div class="w3-container"><ul>';
-        echo $form_to_fill->get_help_html();
-        echo "</ul></div>";
-        
+else
+    echo $users_to_show_html;
+echo '<div class="w3-container"><ul>';
+echo $form_to_fill->get_help_html();
+echo "</ul></div>";
+
 ?></div><?php
 end_script();
 

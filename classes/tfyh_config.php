@@ -19,8 +19,6 @@ class Tfyh_config
 
     public $changelog_name;
 
-    public $parameter_table_name;
-
     public $pdf_footer_text;
 
     public $pdf_document_author;
@@ -46,9 +44,14 @@ class Tfyh_config
     private $toolbox;
 
     /**
-     * configuraton regarding the tenant and data base access
+     * configuraton regarding the tenant
      */
-    private $cfg;
+    private $cfg_app;
+
+    /**
+     * configuraton regarding the data base access
+     */
+    private $cfg_db;
 
     /**
      * configuraton default values. They will take effect, if no setting is provided. They shall be set in the
@@ -70,9 +73,12 @@ class Tfyh_config
         if (! isset($this->settings_tfyh["config"]["parameter_table_name"]))
             $this->settings_tfyh["config"]["parameter_table_name"] = "";
         // assign directly accessable framework settings
-        $this->app_url = (isset($this->cfg["app_url"])) ? $this->cfg["app_url"] : "https://www.tfyh.org";
+        $this->app_url = (isset($this->cfg_app["app_url"])) ? $this->cfg_app["app_url"] : "https://www.tfyh.org";
         $this->app_name = $this->settings_tfyh["config"]["app_name"];
         $this->changelog_name = $this->settings_tfyh["config"]["changelog_name"];
+        
+        // read data base access cobnfiguration
+        $this->read_db_config();
         
         // generate the app_info array with information on version and copyright
         $this->app_info = [];
@@ -80,6 +86,8 @@ class Tfyh_config
                 "../public/version") : "";
         $this->app_info["copyright"] = (file_exists("../public/copyright")) ? file_get_contents(
                 "../public/copyright") : "";
+        $this->app_info["applogo"] = (file_exists("../public/applogo")) ? file_get_contents(
+                "../public/applogo") : "";
         if (strlen($this->app_info["version_string"]) > 0) {
             $parts = explode("_", $this->app_info["version_string"]);
             if (count($parts) > 1)
@@ -100,44 +108,45 @@ class Tfyh_config
     }
 
     /**
-     * Set the configuration. Must only be used by "../install/setup_db_connection.php".
+     * Set the data base configuration. MUST ONLY BE USED BY "../install/setup_db_connection.php".
      * 
      * @param array $cfg
      *            configuration to be copied.
      */
-    public function set_cfg (array $cfg)
+    public function set_cfg_db (array $cfg_db)
     {
-        $this->cfg = $cfg;
+        $this->cfg_db = $cfg_db;
     }
 
     /**
-     * Load all application coniguration into the $this->cfg array.
+     * Load all application coniguration into the $this->cfg_app array.
      */
     public function load_app_configuration ()
     {
         // apply the generic application configuration defaults
-        $this->cfg["backup"] = "off";
-        $this->cfg["pdf_footer_text"] = "";
-        $this->cfg["pdf_document_author"] = "$this->app_name";
-        $this->cfg["pdf_margins"] = [15,15,15,10,10
+        $this->cfg_app["backup"] = "off";
+        $this->cfg_app["pdf_footer_text"] = "";
+        $this->cfg_app["pdf_document_author"] = "$this->app_name";
+        $this->cfg_app["pdf_margins"] = [15,15,15,10,10
         ];
-        $this->cfg["debug_support"] = "";
+        $this->cfg_app["debug_support"] = "";
         
         // apply the application configuration defaults as available in the framework settings
         if (isset($this->settings_tfyh["default"]) && is_array($this->settings_tfyh["default"]))
             foreach ($this->settings_tfyh["default"] as $key => $default_value)
-                $this->cfg[$key] = $default_value;
+                $this->cfg_app[$key] = $default_value;
         // read the application settings from the file
-        $this->read_app_and_db_config();
+        $this->read_app_config();
         
         // assign directly accessable application settings
-        $this->pdf_footer_text = $this->cfg["pdf_footer_text"];
-        $this->pdf_document_author = $this->cfg["pdf_document_author"];
-        $this->pdf_margins = (is_array($this->cfg["pdf_margins"]) && (count($this->cfg["pdf_margins"]) == 5)) ? $this->cfg["pdf_margins"] : [
-                15,15,15,10,10
-        ];
-        $this->debug_level = ((strcasecmp($this->cfg["debug_support"], "on") == 0) ||
-                 (intval($this->cfg["debug_support"]) > 0)) ? 1 : 0;
+        $this->pdf_footer_text = $this->cfg_app["pdf_footer_text"];
+        $this->pdf_document_author = $this->cfg_app["pdf_document_author"];
+        $this->pdf_margins = (is_array($this->cfg_app["pdf_margins"]) &&
+                 (count($this->cfg_app["pdf_margins"]) == 5)) ? $this->cfg_app["pdf_margins"] : [15,15,15,
+                        10,10
+                ];
+        $this->debug_level = ((strcasecmp($this->cfg_app["debug_support"], "on") == 0) ||
+                 (intval($this->cfg_app["debug_support"]) > 0)) ? 1 : 0;
     }
 
     /**
@@ -153,12 +162,12 @@ class Tfyh_config
             $field_value = json_decode($value_string);
         elseif (substr($value_string, 0, 1) == "\"") // String literal. In config files, but not in
                                                      // forms
-            $field_value = substr($value_string, 1, strlen($value_string) - 2);
+        $field_value = mb_substr($value_string, 1, mb_strlen($value_string) - 2);
         elseif (strcasecmp($value_string, "false") == 0)
             $field_value = false;
         elseif (strcasecmp($value_string, "true") == 0)
             $field_value = true;
-        elseif ((strlen($value_string) == 12) && (count(explode("-", $value_string)) == 3))
+            elseif ((mb_strlen($value_string) == 12) && (count(explode("-", $value_string)) == 3))
             $field_value = strtotime($value_string);
         elseif (is_numeric($value_string)) {
             if (strpos($value_string, ".") !== false)
@@ -219,62 +228,105 @@ class Tfyh_config
     }
 
     /**
-     * Read the configuraton regarding the tenant and data base access from the settings_app and settings_db
-     * files. The settings files are a serialized array description, base64 encoded, carrying all information
-     * of the $cfg array. Use the "forms/def_settings.php" to set all values.
+     * Read the data base access configuraton from the settings_db file. The settings file is a serialized
+     * array description, base64 encoded. If the settings_db file has extra fields, it is replaced. (legacy
+     * fix)
      * 
-     * @return the configuration read. False, if no config was found.$this
+     * @return the configuration read. False, if no config was found.
      */
-    private function read_app_and_db_config ()
+    private function read_db_config ()
     {
-        $settings_file_path = "../config/settings";
-        
-        // Configuration is split into data base and application parameters
-        if (file_exists($settings_file_path . "_db")) {
+        // Read data base settings
+        if (file_exists("../config/settings_db")) {
             // read data base connection configuration first
-            $cfgStrBase64 = file_get_contents($settings_file_path . "_db");
+            $cfgStrBase64 = file_get_contents("../config/settings_db");
             if (! $cfgStrBase64)
                 return false;
-            $cfg = unserialize(base64_decode($cfgStrBase64));
-        } elseif (file_exists($settings_file_path)) {
-            // fallback to far older version of common db and app settings (obsolete since mid 2021)
-            $cfgStrBase64 = file_get_contents($settings_file_path);
-            if (! $cfgStrBase64)
-                return false;
-            $cfg = unserialize(base64_decode($cfgStrBase64));
+            $cfg_db = unserialize(base64_decode($cfgStrBase64));
         }
-        if ($cfg["db_up"])
-            $cfg["db_up"] = Tfyh_toolbox::swap_lchars($cfg["db_up"]);
-        if (file_exists($settings_file_path . "_app")) {
-            // merge application configuration into it.
-            $cfgStrBase64 = file_get_contents($settings_file_path . "_app");
-            if ($cfgStrBase64) {
-                $cfg_app = unserialize(base64_decode($cfgStrBase64));
-                foreach ($cfg_app as $key => $value)
-                    if (is_null($cfg_app[$key]))
-                        $cfg[$key] = "";
-                    elseif (is_array($cfg_app[$key]))
-                        $cfg[$key] = $cfg_app[$key];
-                    else
-                        $cfg[$key] = $this->parse_value($cfg_app[$key]);
-            }
-        }
-        // copy all values, but not hte full array, to keep the defaults.
-        foreach ($cfg as $key => $value) {
-            // one exception: for numeric configurations keep default, if setting is not numeric.
-            $default_numeric = (isset($this->cfg[$key]) && is_numeric($this->cfg[$key]));
-            if (! $default_numeric || is_numeric($value))
-                $this->cfg[$key] = $value;
+        $this->cfg_db["db_host"] = $cfg_db["db_host"];
+        $this->cfg_db["db_name"] = $cfg_db["db_name"];
+        $this->cfg_db["db_user"] = $cfg_db["db_user"];
+        $this->cfg_db["db_up"] = Tfyh_toolbox::swap_lchars($cfg_db["db_up"]);
+        // data base layout only used in efacloud (03.08.2022)
+        $this->cfg_db["db_layout_version"] = (isset($cfg_db["db_layout_version"])) ? $cfg_db["db_layout_version"] : 0;
+        // legacy fix: settings_db files sometimes also contain app settings
+        // clear the app settings leftovers
+        if (count($cfg_db) > 5) {
+            $cfg_db = $this->cfg_db;
+            $cfg_db["db_up"] = Tfyh_toolbox::swap_lchars($cfg_db["db_up"]);
+            $cfgStr = serialize($cfg_db);
+            $cfgStrBase64 = base64_encode($cfgStr);
+            file_put_contents("../config/settings_db", $cfgStrBase64);
         }
     }
 
     /**
-     * simple getter.
+     * Read the configuraton regarding the tenant application configuration from the settings_app file. The
+     * settings file is a serialized array description, base64 encoded.
      * 
-     * @return array the configuration regarding the tenant and data base access settings
+     * @return the configuration read. False, if no config was found.
+     */
+    private function read_app_config ()
+    {
+        if (file_exists("../config/settings_app")) {
+            // merge application configuration into it.
+            $cfgStrBase64 = file_get_contents("../config/settings_app");
+            if ($cfgStrBase64) {
+                $cfg_app_raw = unserialize(base64_decode($cfgStrBase64));
+                $cfg_app = [];
+                foreach ($cfg_app_raw as $key => $value)
+                    if (is_null($cfg_app_raw[$key]))
+                        $cfg_app[$key] = "";
+                    elseif (is_array($cfg_app_raw[$key]))
+                        $cfg_app[$key] = $cfg_app_raw[$key];
+                    else
+                        $cfg_app[$key] = $this->parse_value($cfg_app_raw[$key]);
+            }
+        }
+        // copy all values into $this->cfg_app, to keep the defaults where no configuration is set.
+        foreach ($cfg_app as $key => $value) {
+            // one exception: for numeric configurations keep default, if setting is not numeric.
+            $default_numeric = (isset($this->cfg_app[$key]) && is_numeric($this->cfg_app[$key]));
+            if (! $default_numeric || is_numeric($value))
+                $this->cfg_app[$key] = $value;
+        }
+    }
+
+    /**
+     * Store the provided configuration array as tenant application configuration.
+     * 
+     * @param array $cfg_app
+     *            the tenant application configuration
+     */
+    public function store_app_config (array $cfg_app)
+    {
+        $settings_path = "../config/settings_app";
+        $cfgStr = serialize($cfg_app);
+        $cfgStrBase64 = base64_encode($cfgStr);
+        $info = "<p>'$settings_path' wird geschrieben ... ";
+        $byte_cnt = file_put_contents($settings_path, $cfgStrBase64);
+        $info .= $byte_cnt . " Bytes.</p>";
+        return $info;
+    }
+
+    /**
+     * simple getter of the tenant settings (cfg_app).
+     * 
+     * @return array the configuration regarding the tenant settings
      */
     public function get_cfg ()
     {
-        return $this->cfg;
+        return $this->cfg_app;
+    }
+
+    /**
+     * simple getter of the db access settings. Shall only be called by Tfyh_socket::open()
+     * 
+     * @return array the configuration regarding the db access settings
+     */
+    public function get_cfg_db ()
+    {
+        return $this->cfg_db;
     }
 }

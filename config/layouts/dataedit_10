@@ -1,0 +1,32 @@
+tags;required;name;value;label;type;class;size;maxlength
+<span id='vSpanSystemData'><div class='w3-row'><div class='w3-col l3'>;;PersonId;;Person (Id);text;display-bold;90%;36
+</div><div class='w3-col l3'>;;ecrid;;eindeutige Datensatz-Referenz (ecrid);text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l3'>;;LastModified;;zuletzt geändert am;text;display-bold;90%;20
+</div><div class='w3-col l3'>;;ChangeCount;;Version (Änderungszähler);text;display-bold;90%;20
+</div><div class='w3-col l3'>;;LastModification;;Art der letzten Änderung;text;display-bold;90%;20
+</div></div><div class='w3-row'><div class='w3-col l1'><hr>;;_no_input;;es wird nicht empfohlen, Datensätze in der Tabelle Fahrtenabzeichen in efaCloud zu modifizieren.<hr>;;;
+</div></div></span><div class='w3-row'><div class='w3-col l2'>;;Abzeichen;;Abzeichen;text;;90%;12
+</div><div class='w3-col l2'>;;AbzeichenAB;;AbzeichenAB;text;display-bold;90%;12
+</div></div><div class='w3-row'><div class='w3-col l2'>;;Kilometer;;Kilometer;text;;90%;12
+</div><div class='w3-col l2'>;;KilometerAB;;KilometerAB;text;display-bold;90%;12
+</div></div><div class='w3-row'><div class='w3-col l2'>;;Fahrtenheft;;elektronisches Fahrtenheft;text;display-bold;90%;50
+</div><div class='w3-col l2'>;;GUI_VORNAME;;GUI_VORNAME;text;display-bold;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;GUI_NACHNAME;;GUI_NACHNAME;text;display-bold;90%;50
+</div><div class='w3-col l2'>;;GUI_JAHRGANG;;GUI_JAHRGANG;text;display-bold;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;GUI_ANZABZEICHEN;;GUI_ANZABZEICHEN;text;display-bold;90%;50
+</div><div class='w3-col l2'>;;GUI_ANZKM;;GUI_ANZKM;text;display-bold;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;GUI_ANZABZEICHENAB;;GUI_ANZABZEICHENAB;text;display-bold;90%;50
+</div><div class='w3-col l2'>;;GUI_ANZKMAB;;GUI_ANZKMAB;text;display-bold;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;GUI_LETZTESJAHR;;GUI_LETZTESJAHR;text;display-bold;90%;50
+</div><div class='w3-col l2'>;;GUI_LETZTEKM;;GUI_LETZTEKM;text;display-bold;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;GUI_LETZTESDATUM;;GUI_LETZTESDATUM;text;display-bold;90%;50
+</div><div class='w3-col l2'>;;GUI_VERSION;;GUI_VERSION;text;display-bold;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;GUI_SCHLUESSEL;;GUI_SCHLUESSEL;text;display-bold;90%;50
+</div><div class='w3-col l2'>;;GUI_SIGNATUR;;GUI_SIGNATUR;text;display-bold;90%;50
+</div></div><div class='w3-row'><div class='w3-col l2'>;;GUI_STATUS;;GUI_STATUS;text;display-bold;90%;50
+</div></div><div class='w3-row'><div class='w3-col l1'> <br>;;submit;Jetzt ändern;;submit;formbutton;;
+</div></div>;;_no_input;;;;;;
+<li><span class='helptext'>;;_help_text;;Die Datenänderung wirkt im efaCloud Server sofort, in angebundenen efa-PCs erst nach der nächsten Synchronisation.;;;;
+</span></li><li><span class='helptext'>;;_help_text;;Aus technischen Gründen wird das Formular bei fehlerhaften Angaben komplett zurückgesetzt.;;;;
+</span></li><li><span class='helptext'>;;_help_text;;Datensätze mit Art der letzten Änderung 'delete' können nicht mehr modifiziert werden.;;;;
+</span></li>;;_help_text;;;;;;

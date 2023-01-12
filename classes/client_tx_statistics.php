@@ -209,9 +209,9 @@ class Client_tx_statistics
                 else
                     $ret .= strval(round($data_array[$r][$c], 1)) . ",";
             }
-            $ret = substr($ret, 0, strlen($ret) - 1) . "],\n";
+            $ret = mb_substr($ret, 0, mb_strlen($ret) - 1) . "],\n";
         }
-        $ret = substr($ret, 0, strlen($ret) - 2) . "]";
+        $ret = mb_substr($ret, 0, mb_strlen($ret) - 2) . "]";
         return $ret;
     }
 

@@ -9,6 +9,7 @@
 // $debug_log = 'https://efacloud.org/support/debug/gather.php?data=';
 $user_requested_file = __FILE__;
 include_once "../classes/init.php";
+$src_subdir = (isset($_GET["subdir"])) ? $_GET["subdir"] . "/" : "";
 
 // Source Code path.
 // ====== Depends on the ../config/settings_tfyh file.
@@ -23,8 +24,9 @@ if (is_null($app_remove_files))
     $app_remove_files = [];
 $current_version = (file_exists("../public/version")) ? file_get_contents("../public/version") : "undefined";
 $current_version_installed = (file_exists("../public/version")) ? filemtime("../public/version") : 0;
-// -- The standard gathers the one and only $version_server, but efaCloud allows for selcting a version. 
-// $version_server = (isset($app_version_path) && (strlen($app_version_path) > 0)) ? file_get_contents($app_version_path) : "undefined";
+// -- The standard gathers the one and only $version_server, but efaCloud allows for selcting a version.
+// $version_server = (isset($app_version_path) && (strlen($app_version_path) > 0)) ?
+// file_get_contents($app_version_path) : "undefined";
 
 // ===== start page output
 echo file_get_contents('../config/snippets/page_01_start');
@@ -34,7 +36,7 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 
 <?php
 if (! isset($_GET["upgrade"])) {
-    $versions_request = 'https://efacloud.org/src/scanversions.php?own=' .
+    $versions_request = "https://efacloud.org/src/" . $src_subdir . "scanversions.php?own=" .
              htmlspecialchars(file_get_contents("../public/version"));
     $versions_string = file_get_contents($versions_request);
     $versions = explode("|", $versions_string);
@@ -58,15 +60,11 @@ if (! isset($_GET["upgrade"])) {
     $version_options = "";
     foreach ($versions as $version) {
         if (strlen($version) > 1) {
-            if (strpos($version, "Versionswechsel") === false) {
-                $release_notes = "<a href='https://efacloud.org/src/" . $version .
-                         "/release_notes.html' target='_blank'>Release Notes " . $version .
-                         " nachlesen</a><br />\n" . $release_notes;
-                $version_options = "<option value='" . $version . "'>" . $version . "</option>\n" .
-                         $version_options;
-            } else {
-                $release_notes = "<b>" . $version . "</b><br />\n" . $release_notes;
-            }
+            $release_notes = "<a href='https://efacloud.org/src/" . $src_subdir . $version .
+                     "/release_notes.html' target='_blank'>Release Notes " . $version .
+                     " nachlesen</a><br />\n" . $release_notes;
+            $version_options = "<option value='" . $version . "'>" . $version . "</option>\n" .
+                     $version_options;
         }
     }
     echo $release_notes;
@@ -79,8 +77,9 @@ if (! isset($_GET["upgrade"])) {
 			Server URL (<?php echo $app_root; ?>) und die nun installierte Version an efacloud.org
 			übermittelt werden<input type="checkbox" name="agreeAutoregistration"
 		checked><span class="cb-checkmark"></span>
-	</label><br /> <input type='submit' class='formbutton'
-		value='Jetzt aktualisieren' />
+	</label><br /> <input type='hidden' name='src_subdir'
+		value='<?php echo $src_subdir; ?>' /> <input type='submit'
+		class='formbutton' value='Jetzt aktualisieren' />
 </form>
 <p>Bitte beachten Sie: der Vorgang startet mit dem Klick auf den Knopf
 	sofort und dauert nur wenige Sekunden.</p>
@@ -92,6 +91,7 @@ if (! isset($_GET["upgrade"])) {
     $version_to_install = $_POST["version"];
     $agreeAutoregistration = isset($_POST["agreeAutoregistration"]) &&
              (strcasecmp($_POST["agreeAutoregistration"], "on") == 0);
+    $src_subdir = $_POST["src_subdir"];
     
     if ($agreeAutoregistration) {
         // see https://stackoverflow.com/questions/5647461/how-do-i-send-a-post-request-with-php
@@ -114,13 +114,13 @@ if (! isset($_GET["upgrade"])) {
     
     // Source Code path.
     // ==============================================================================================
-    $efacloud_src_path = "https://efacloud.org/src/" . $version_to_install . "/efacloud_server.zip";
+    $efacloud_src_path = "https://efacloud.org/src/" . $src_subdir . $version_to_install . "/efacloud_server.zip";
     // ==============================================================================================
     // check loaded modules
     // ==============================================================================================
     $ref_config = ["bz2","calendar","Core","ctype","curl","date","dom","exif","fileinfo","filter","ftp",
             "gd","gettext","hash","iconv","json","libxml","mbstring","mysqli","openssl","pcre","pdo_mysql",
-            "PDO","Phar","posix","Reflection","session","SimpleXML","sockets","SPL","standard","tokenizer",
+            "PDO","Phar","posix","Reflection","session","SimpleXML","SPL","standard","tokenizer",
             "xml","xmlreader","xmlwriter","xsl","zip","zlib"
     ];
     $this_config = get_loaded_extensions();
@@ -215,10 +215,11 @@ if (! isset($_GET["upgrade"])) {
     
     // adapt history settings, using the updated class definitions.
     include_once '../classes/efa_tables.php';
-    $efa_tables = new Efa_tables($toolbox, $socket);
     include_once '../classes/efa_tools.php';
-    $efa_tools = new Efa_tools($efa_tables, $toolbox);
-    $efa_tools->upgrade_efa_tables();
+    $efa_tools = new Efa_tools($toolbox, $socket);
+    $upgrade_success = $efa_tools->upgrade_efa_tables();
+    if ($upgrade_success === false)
+        echo "<b>Fehler</b><br>Das Tabellenlayout konnte nicht angepasst werden. Details siehe '../log/efa_tools.log'.<br>";
     
     // Special case upgrade from 2.3.0_11 and lower: increase the group member size
     // ==============================================================================================
@@ -247,17 +248,10 @@ if (! isset($_GET["upgrade"])) {
     include_once "../classes/tfyh_audit.php";
     $audit = new Tfyh_audit($toolbox, $socket);
     $audit->run_audit();
-    echo '<h5>Überprüfe das Ergebnis</h5><p>Audit-Protokoll:</p><p>';
-    echo str_replace("\n", "<br>", 
-            str_replace(">", "&gt;", 
-                    str_replace("<", "&lt;", 
-                            str_replace("&", "&amp;", file_get_contents("../log/app_audit.log")))));
-    echo "<br>Fertig. Diese Seite nicht neu laden, sondern als nächstes:<br><br>";
-    echo "<a href='../pages/home.php'><input type='submit' class='formbutton' value='Weiter mit der Startseite.'></a></p>";
+    echo '<h5>Überprüfe das Ergebnis</h5><p>Das Audit-Protokoll ist abgelegt unter "../log/app_audit.log":</p><p>';
     include "../classes/init_version.php";
 }
-?>
-<p>&nbsp;</p>
+?><p>&nbsp;</p>
 <p>
 	<small>&copy; efacloud - nmichael.de</small>
 </p>

@@ -82,7 +82,7 @@ echo file_get_contents('../config/snippets/page_02_nav_to_body');
 
 echo $toolbox->form_errors_to_html($form_errors);
 if ($todo < 2) {
-    echo $form_to_fill->get_html($fs_id);
+    echo $form_to_fill->get_html();
     echo '<h5><br />Ausfüllhilfen</h5><ul>';
     echo $form_to_fill->get_help_html();
     echo "</ul>";
